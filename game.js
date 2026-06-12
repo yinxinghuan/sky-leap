@@ -14,12 +14,12 @@ import { EffectComposer } from 'three/addons/postprocessing/EffectComposer.js';
 import { RenderPass } from 'three/addons/postprocessing/RenderPass.js';
 import { UnrealBloomPass } from 'three/addons/postprocessing/UnrealBloomPass.js';
 import { OutputPass } from 'three/addons/postprocessing/OutputPass.js';
-import { hero as buildHero, platStone, platPillar, runeDisk, bgPillars, STONE_TONES } from './builders/skyruins.js?v=15';
+import { hero as buildHero, platStone, platPillar, runeDisk, bgSkyline, STONE_TONES } from './builders/skyruins.js?v=24';
 
 // --- tunables ---------------------------------------------------------------
 const CHARGE_MAX = 1.05;          // seconds to full charge
-const MIN_DIST = 2.0;             // jump distance at zero charge (world units along)
-const MAX_DIST = 6.2;             // jump distance at full charge
+const MIN_DIST = 2.5;             // jump distance at zero charge
+const MAX_DIST = 9.5;             // jump distance at full charge (pillars spread further)
 const BASE_H = 1.2;               // arc apex height at zero charge
 const PEAK_H = 2.1;               // extra apex height at full charge
 const AIR_BASE = 0.42;            // flight time at zero charge
@@ -33,7 +33,7 @@ const PLAT_TOP = 0;               // hero stands on y=0
 // KEY: gap (center-to-center) must exceed platform LENGTH (2*half) so there's
 // visible void between pads — otherwise platforms merge into a continuous road.
 const REACH_SAFETY = 0.86;
-const GAP_NEAR = 3.4, GAP_FAR = 5.2;       // gap (center-to-center) easy->hard
+const GAP_NEAR = 5.0, GAP_FAR = 8.0;       // gap (center-to-center) — spread out so only the next 1-2 pads show
 const GAP_JITTER = 0.3;
 const GAP_MAX = MAX_DIST * REACH_SAFETY;   // = 5.33, hard cap so full charge always reaches
 const SIZE_BASE = 1.1, SIZE_MIN = 0.7;     // platform half-length (along) easy->hard
@@ -53,6 +53,7 @@ const CAM_LOOK_AHEAD = 0.42;      // how far toward the next platform the focus 
 const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
 const lerp = (a, b, t) => a + (b - a) * clamp(t, 0, 1);
 const easeInQuad = c => c * c;
+const easeInOutQuad = t => (t < 0.5 ? 2 * t * t : 1 - Math.pow(-2 * t + 2, 2) / 2);
 const rand = (a, b) => a + Math.random() * (b - a);
 
 function jumpDist(c){ return MIN_DIST + (MAX_DIST - MIN_DIST) * easeInQuad(c); }
@@ -67,7 +68,7 @@ export function startGame({ canvas, hud }){
   renderer.toneMappingExposure = 1.0;
 
   const scene = new THREE.Scene();
-  scene.fog = new THREE.Fog(0xd0e2d2, 40, 82);   // pale-mint haze tuned for the ortho distance
+  scene.fog = new THREE.Fog(0x8ccabf, 38, 86);   // fog color ≈ sky teal so distance truly dissolves into the sky
 
   // Orthographic 45° oblique (axonometric) — parallel lines, no vanishing point,
   // low elevation so the tall pillar front faces read (matches the reference).
@@ -75,25 +76,28 @@ export function startGame({ canvas, hud }){
   const camera = new THREE.OrthographicCamera(-VIEW, VIEW, VIEW, -VIEW, 0.1, 200);
   const camFocus = new THREE.Vector3();
 
-  // ── Golden-hour gradient sky dome (amber horizon → violet zenith) ──
+  // ── Sky dome: soft teal-cyan vertical gradient + a lime-yellow corner glow
+  // (matches the reference: lime top-left → teal-cyan body → pale mint). ──
   const sky = new THREE.Mesh(
     new THREE.SphereGeometry(180, 24, 14),
     new THREE.ShaderMaterial({
       side: THREE.BackSide, depthWrite: false, fog: false,
       uniforms: {
-        top: { value: new THREE.Color(0x83c7ba) },   // mint-teal
-        mid: { value: new THREE.Color(0xafdac6) },   // pale mint
-        bot: { value: new THREE.Color(0xd8e6cc) },   // pale warm-mint horizon
+        top: { value: new THREE.Color(0x76c3ba) },   // soft teal-cyan
+        mid: { value: new THREE.Color(0x8ccabf) },   // teal-mint
+        bot: { value: new THREE.Color(0xc2ded0) },   // pale mint horizon
+        glow: { value: new THREE.Color(0xccdd8a) },  // lime-yellow corner
+        glowDir: { value: new THREE.Vector3(-0.4, 0.72, 0.45).normalize() },   // upper-LEFT in screen space
       },
       vertexShader: 'varying vec3 vP; void main(){ vP = position; gl_Position = projectionMatrix * modelViewMatrix * vec4(position,1.0); }',
-      fragmentShader: 'varying vec3 vP; uniform vec3 top; uniform vec3 mid; uniform vec3 bot; void main(){ float h = normalize(vP).y; vec3 c = h > 0.0 ? mix(mid, top, clamp(h*1.25,0.0,1.0)) : mix(mid, bot, clamp(-h*1.8,0.0,1.0)); gl_FragColor = vec4(c,1.0); }',
+      fragmentShader: 'varying vec3 vP; uniform vec3 top; uniform vec3 mid; uniform vec3 bot; uniform vec3 glow; uniform vec3 glowDir; void main(){ vec3 n = normalize(vP); float h = n.y; vec3 c = h > 0.0 ? mix(mid, top, clamp(h*1.25,0.0,1.0)) : mix(mid, bot, clamp(-h*1.8,0.0,1.0)); float g = clamp(dot(n, glowDir), 0.0, 1.0); c = mix(c, glow, g*g*0.6); gl_FragColor = vec4(c,1.0); }',
     })
   );
   scene.add(sky);
 
   // ── Soft, even pastel lighting (low contrast, airy — no hard sun) ──
-  scene.add(new THREE.HemisphereLight(0xeaf4ee, 0xf2dcd2, 0.5));    // soft sky/ground fill
-  const key = new THREE.DirectionalLight(0xfff4e8, 1.0);
+  scene.add(new THREE.HemisphereLight(0xeef6f0, 0xf4e0d6, 0.82));  // strong flat fill (ref is near-shadowless)
+  const key = new THREE.DirectionalLight(0xfff4e8, 0.5);
   key.position.set(-7, 13, 6);     // higher + softer → gentle short shadows
   key.castShadow = true;
   key.shadow.mapSize.set(1024, 1024);
@@ -144,9 +148,15 @@ export function startGame({ canvas, hud }){
   const hero = buildHero();
   scene.add(hero);
 
-  // distant skyline of faint pillars — trails the hero for constant depth
-  const bg = bgPillars();
+  // distant skyline — a flat billboard kept far in front of the camera each frame
+  const bg = bgSkyline();
   scene.add(bg);
+  const _bgDir = new THREE.Vector3();
+  function placeSkyline(){
+    _bgDir.copy(camFocus).sub(camera.position).normalize();
+    bg.position.copy(camera.position).addScaledVector(_bgDir, 72);   // far back → fogged
+    bg.quaternion.copy(camera.quaternion);                          // face the camera
+  }
 
   // charge ring (ground, grows with charge)
   const ring = new THREE.Mesh(
@@ -272,7 +282,7 @@ export function startGame({ canvas, hud }){
     master = AC.createGain(); master.gain.value = 0.85;
     const comp = AC.createDynamicsCompressor();
     master.connect(comp); comp.connect(AC.destination);
-    startAmbient();
+    // no background-music pad — SFX only
   }
   function tone(freq, dur, o = {}){
     if (!AC) return;
@@ -431,6 +441,7 @@ export function startGame({ canvas, hud }){
     hero.position.set(0, PLAT_TOP, current.along);
     hero.scale.set(1, 1, 1);
     hero.rotation.set(0, 0, 0);
+    hero.userData.flip.rotation.set(0, 0, 0);
     hero.visible = true;
     ring.material.opacity = 0;
     pulseRing.visible = false; pulseT = 0;
@@ -569,7 +580,6 @@ export function startGame({ canvas, hud }){
 
     // backdrop trails the hero so it's always present
     const hz = hero.position.z;
-    bg.position.z = hz;
     sky.position.set(camera.position.x, camera.position.y, camera.position.z);
     // dust motes: drift up + slow sideways, wrap within a box around the hero
     motes.position.z = hz;
@@ -595,12 +605,16 @@ export function startGame({ canvas, hud }){
       const t = clamp(launchT / airTime, 0, 1);
       hero.position.z = startAlong + dist * t;
       hero.position.y = PLAT_TOP + 4 * apex * t * (1 - t);
-      const stretch = 1 + 0.22 * Math.sin(Math.PI * t) * (1 - 0.5 * t);
+      // takeoff stretch early, ease off after the apex
+      const stretch = 1 + 0.26 * Math.sin(Math.PI * t) * (1 - 0.5 * t);
       hero.scale.set(1 / Math.sqrt(stretch), stretch, 1 / Math.sqrt(stretch));
+      // lively forward somersault — eased so it tucks fast then lands upright
+      const spin = easeInOutQuad(t);
+      hero.userData.flip.rotation.x = -spin * Math.PI * 2;
       // trace the ACTUAL flight path into a continuous gradient curve (not predictive)
       flightPath.push(new THREE.Vector3(0, hero.position.y + 0.4, hero.position.z));
       buildTrail();
-      if (t >= 1){ hero.scale.set(1, 1, 1); judgeLanding(); }
+      if (t >= 1){ hero.scale.set(1, 1, 1); hero.userData.flip.rotation.set(0, 0, 0); judgeLanding(); }
     } else if (state === FALLING){
       deadTimer += dt;   // hero is shattered into particles; just count down to the card
       if (deadTimer > 0.95) finalizeDeath();
@@ -628,6 +642,7 @@ export function startGame({ canvas, hud }){
 
     updateParticles(gdt);
     updateCamera(gdt);
+    placeSkyline();
     composer.render();
   }
 
