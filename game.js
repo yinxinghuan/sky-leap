@@ -14,7 +14,7 @@ import { EffectComposer } from 'three/addons/postprocessing/EffectComposer.js';
 import { RenderPass } from 'three/addons/postprocessing/RenderPass.js';
 import { UnrealBloomPass } from 'three/addons/postprocessing/UnrealBloomPass.js';
 import { OutputPass } from 'three/addons/postprocessing/OutputPass.js';
-import { hero as buildHero, platStone, platPillar, runeDisk, bgPillars, STONE_TONES } from './builders/skyruins.js?v=13';
+import { hero as buildHero, platStone, platPillar, runeDisk, bgPillars, STONE_TONES } from './builders/skyruins.js?v=15';
 
 // --- tunables ---------------------------------------------------------------
 const CHARGE_MAX = 1.05;          // seconds to full charge
@@ -44,11 +44,10 @@ const WARMUP = 3;                 // first N platforms forced wide + near, no de
 const AHEAD = 6;                  // platforms to keep spawned ahead
 const BEHIND = 2;                 // recycle platforms more than this behind
 
-const CAM_BACK = 6.5;             // camera distance behind hero (along -z)
-const CAM_SIDE = 6.5;             // camera offset to the side (along -x) → 45° oblique azimuth
-const CAM_UP = 5.0;               // camera height
+const ISO_DIST = 30;              // ortho camera distance (no perspective scaling)
+const VIEW = 10.0;               // ortho half-height (zoom — show the row, not a close-up)
 const CAM_LERP = 5;               // follow responsiveness (per second)
-const CAM_LOOK_AHEAD = 0.42;      // how far toward the next platform the look-target sits
+const CAM_LOOK_AHEAD = 0.42;      // how far toward the next platform the focus sits
 
 // --- helpers ----------------------------------------------------------------
 const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
@@ -68,10 +67,13 @@ export function startGame({ canvas, hud }){
   renderer.toneMappingExposure = 1.0;
 
   const scene = new THREE.Scene();
-  scene.fog = new THREE.Fog(0xd4e0d6, 34, 86);   // subtle haze — only the far distance softens
+  scene.fog = new THREE.Fog(0xd0e2d2, 40, 82);   // pale-mint haze tuned for the ortho distance
 
-  const camera = new THREE.PerspectiveCamera(55, 1, 0.1, 400);
-  const camLook = new THREE.Vector3();
+  // Orthographic 45° oblique (axonometric) — parallel lines, no vanishing point,
+  // low elevation so the tall pillar front faces read (matches the reference).
+  const ISO_DIR = new THREE.Vector3(-1, 0.62, -1).normalize();
+  const camera = new THREE.OrthographicCamera(-VIEW, VIEW, VIEW, -VIEW, 0.1, 200);
+  const camFocus = new THREE.Vector3();
 
   // ── Golden-hour gradient sky dome (amber horizon → violet zenith) ──
   const sky = new THREE.Mesh(
@@ -79,9 +81,9 @@ export function startGame({ canvas, hud }){
     new THREE.ShaderMaterial({
       side: THREE.BackSide, depthWrite: false, fog: false,
       uniforms: {
-        top: { value: new THREE.Color(0x6fb8b0) },   // soft teal zenith
-        mid: { value: new THREE.Color(0xbfdcc8) },   // pale mint band
-        bot: { value: new THREE.Color(0xf2cdbf) },   // soft peach horizon
+        top: { value: new THREE.Color(0x83c7ba) },   // mint-teal
+        mid: { value: new THREE.Color(0xafdac6) },   // pale mint
+        bot: { value: new THREE.Color(0xd8e6cc) },   // pale warm-mint horizon
       },
       vertexShader: 'varying vec3 vP; void main(){ vP = position; gl_Position = projectionMatrix * modelViewMatrix * vec4(position,1.0); }',
       fragmentShader: 'varying vec3 vP; uniform vec3 top; uniform vec3 mid; uniform vec3 bot; void main(){ float h = normalize(vP).y; vec3 c = h > 0.0 ? mix(mid, top, clamp(h*1.25,0.0,1.0)) : mix(mid, bot, clamp(-h*1.8,0.0,1.0)); gl_FragColor = vec4(c,1.0); }',
@@ -131,7 +133,9 @@ export function startGame({ canvas, hud }){
     const w = window.innerWidth, h = window.innerHeight;
     renderer.setSize(w, h, false);
     composer.setSize(w, h);
-    camera.aspect = w / h;
+    const aspect = w / h;
+    camera.left = -VIEW * aspect; camera.right = VIEW * aspect;
+    camera.top = VIEW; camera.bottom = -VIEW;
     camera.updateProjectionMatrix();
   }
   window.addEventListener('resize', resize);
@@ -169,8 +173,8 @@ export function startGame({ canvas, hud }){
     transparent: true, depthWrite: false, fog: false,
     uniforms: {
       uOpacity: { value: 1 },
-      cA: { value: new THREE.Color(0x3fb6ac) },   // teal at the hero
-      cB: { value: new THREE.Color(0xf2c14e) },   // gold toward the landing
+      cA: { value: new THREE.Color(0xffffff) },   // white arc (ref)
+      cB: { value: new THREE.Color(0xffffff) },
     },
     vertexShader: 'varying vec2 vUv; void main(){ vUv = uv; gl_Position = projectionMatrix * modelViewMatrix * vec4(position,1.0); }',
     fragmentShader: 'varying vec2 vUv; uniform float uOpacity; uniform vec3 cA; uniform vec3 cB; void main(){ vec3 c = mix(cA, cB, vUv.x); float a = (0.45 + 0.55 * vUv.x) * uOpacity; gl_FragColor = vec4(c, a); }',
@@ -432,9 +436,9 @@ export function startGame({ canvas, hud }){
     pulseRing.visible = false; pulseT = 0;
     aimArc.visible = false; flightPath = []; arcFade = 0;
     slow = 0; timeScale = 1; camKick = 0;
-    camera.position.set(-CAM_SIDE, CAM_UP, current.along - CAM_BACK);
-    camLook.set(-1.2, 0.2, current.along + 1);
-    camera.lookAt(camLook);
+    camFocus.set(-1, 0.6, current.along);
+    camera.position.set(camFocus.x + ISO_DIR.x * ISO_DIST, camFocus.y + ISO_DIR.y * ISO_DIST, camFocus.z + ISO_DIR.z * ISO_DIST);
+    camera.lookAt(camFocus);
     hud.setScore(0); hud.setCombo(0); hud.setReady(true); hud.setDead(null);
   }
 
@@ -538,24 +542,16 @@ export function startGame({ canvas, hud }){
 
   function updateCamera(dt){
     if (state === DEAD) return;
-    const tz = hero.position.z - CAM_BACK;
-    let ty = CAM_UP + camKick;
-    if (state === LAUNCH){
-      const t = clamp(launchT / airTime, 0, 1);
-      ty += 0.8 * apex * Math.sin(Math.PI * t) * 0.25;
+    if (state !== FALLING){   // FALLING freezes the camera to watch the shatter
+      const next = plats.find(p => p.idx === current.idx + 1);
+      const aheadZ = next ? next.along : hero.position.z + 3;
+      const fz = lerp(hero.position.z, aheadZ, CAM_LOOK_AHEAD);
+      camFocus.x = lerp(camFocus.x, -1, CAM_LERP * dt);
+      camFocus.y = lerp(camFocus.y, 0.6 + camKick, CAM_LERP * dt);
+      camFocus.z = lerp(camFocus.z, fz, CAM_LERP * dt);
     }
-    if (state !== FALLING){
-      camera.position.x = lerp(camera.position.x, -CAM_SIDE, CAM_LERP * dt);
-      camera.position.y = lerp(camera.position.y, ty, CAM_LERP * dt);
-      camera.position.z = lerp(camera.position.z, tz, CAM_LERP * dt);
-    }
-    const next = plats.find(p => p.idx === current.idx + 1);
-    const aheadZ = next ? next.along : hero.position.z + 3;
-    const lookZ = lerp(hero.position.z, aheadZ, CAM_LOOK_AHEAD);
-    camLook.x = lerp(camLook.x, -1.2, CAM_LERP * dt);   // bias so the oblique rail sits centered
-    camLook.y = lerp(camLook.y, 0.2, CAM_LERP * dt);
-    camLook.z = lerp(camLook.z, lookZ, CAM_LERP * dt);
-    camera.lookAt(camLook);
+    camera.position.set(camFocus.x + ISO_DIR.x * ISO_DIST, camFocus.y + ISO_DIR.y * ISO_DIST, camFocus.z + ISO_DIR.z * ISO_DIST);
+    camera.lookAt(camFocus);
   }
 
   let last = performance.now();

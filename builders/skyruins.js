@@ -10,13 +10,14 @@
 // group.userData.runeMeshes.
 
 import * as THREE from 'three';
-import { P, box, cyl, cone, darken } from '../lib/prims.js';
+import { P, box, cone, darken } from '../lib/prims.js';
 
 // Mid warm-pastel pillar-top tones (peach / dusty-rose / cream / mauve).
 export const STONE_TONES = [0xe6bcae, 0xd9aeae, 0xe9cbac, 0xceb2bd];
-const PAD = 0xebcf8c;                 // soft warm glowing landing pad
+const PAD = 0xf0dc92;                 // pale yellow glowing landing pad (ref)
 const PILLAR_H = 16;                  // pillars run from y=0 down to y=-16
-const PILLAR_BOT = 0xdfece4;          // pale mint the body fades to (≈ fog) at the bottom
+const PILLAR_TOP = 0xe8acb2;          // clean rose-pink top (ref)
+const PILLAR_BOT = 0xf0d2a6;          // peach bottom (ref) — uniform pink→peach gradient
 
 const clamp01 = v => Math.max(0, Math.min(1, v));
 
@@ -26,7 +27,7 @@ const clamp01 = v => Math.max(0, Math.min(1, v));
 const gradMat = new THREE.MeshStandardMaterial({ vertexColors: true, flatShading: true, roughness: 0.95, metalness: 0 });
 
 // A tall box whose vertices are colored top→bottom (top at y=0, extends down).
-function gradPillarMesh(w, d, topColor, h = PILLAR_H, botColor = PILLAR_BOT){
+function gradPillarMesh(w, d, topColor = PILLAR_TOP, h = PILLAR_H, botColor = PILLAR_BOT){
   const geo = new THREE.BoxGeometry(w, h, d);
   geo.translate(0, -h / 2, 0);                       // top face at y=0
   const pos = geo.attributes.position;
@@ -68,30 +69,27 @@ function padTop(g, half, w, ei = 0.05){
   return [pad];
 }
 
-// ── Platform: tall rooted gradient pillar + glowing pad (the common one). ──
-export function platStone(half, w, tone){
-  tone = tone || STONE_TONES[0];
+// ── Platform: tall rooted pink→peach pillar + glowing pad (the common one). ──
+export function platStone(half, w){
   const g = new THREE.Group();
-  g.add(gradPillarMesh(w, half * 2, tone));
+  g.add(gradPillarMesh(w, half * 2));
   g.userData.runeMeshes = padTop(g, half, w);
   return g;
 }
 
 // ── Platform: pillar with a darker cap lip (variety). ──
-export function platPillar(half, w, tone){
-  tone = tone || STONE_TONES[0];
+export function platPillar(half, w){
   const g = new THREE.Group();
-  g.add(gradPillarMesh(w, half * 2, tone));
-  g.add(box(w * 1.04, 0.12, half * 2 * 1.04, darken(tone, 0.8), 0, -0.06, 0)); // cap lip
+  g.add(gradPillarMesh(w, half * 2));
+  g.add(box(w * 1.04, 0.12, half * 2 * 1.04, darken(PILLAR_TOP, 0.82), 0, -0.06, 0)); // cap lip
   g.userData.runeMeshes = padTop(g, half, w);
   return g;
 }
 
 // ── Platform: pillar with a brighter teal-hearted pad (the every-6th target). ──
-export function runeDisk(half, w, tone){
-  tone = tone || STONE_TONES[2];
+export function runeDisk(half, w){
   const g = new THREE.Group();
-  g.add(gradPillarMesh(w, half * 2, tone));
+  g.add(gradPillarMesh(w, half * 2));
   const pad = box(w * 0.62, 0.05, half * 2 * 0.62, PAD, 0, 0.02, 0, { e: PAD, ei: 0.28 });
   g.add(pad);
   g.add(box(w * 0.24, 0.06, half * 2 * 0.24, P.accent, 0, 0.03, 0, { e: P.accent, ei: 0.55 })); // teal heart
@@ -117,8 +115,8 @@ export function bgPillars(){
     { x: -14, z: 58, top: 3.0, w: 2.2 },
   ];
   for (const s of specs){
-    // pale, low-contrast top→bottom so they read as fogged silhouettes
-    const m = gradPillarMesh(s.w, s.w, 0xc8ddd5, 22, 0xdfece4);
+    // very pale mint, near the sky color → barely-there fogged skyline (ref)
+    const m = gradPillarMesh(s.w, s.w, 0xbcd6cc, 24, 0xd6e2d2);
     m.position.set(s.x, s.top, s.z);
     m.castShadow = false; m.receiveShadow = false;
     g.add(m);
