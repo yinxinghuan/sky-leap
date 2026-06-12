@@ -14,7 +14,8 @@ import { EffectComposer } from 'three/addons/postprocessing/EffectComposer.js';
 import { RenderPass } from 'three/addons/postprocessing/RenderPass.js';
 import { UnrealBloomPass } from 'three/addons/postprocessing/UnrealBloomPass.js';
 import { OutputPass } from 'three/addons/postprocessing/OutputPass.js';
-import { hero as buildHero, platStone, platPillar, runeDisk, bgPillars, STONE_TONES } from './builders/skyruins.js?v=28';
+import { platStone, platPillar, runeDisk, bgPillars, STONE_TONES } from './builders/skyruins.js?v=29';
+import { CHARACTERS } from './builders/characters.js?v=1';
 
 // --- tunables ---------------------------------------------------------------
 const CHARGE_MAX = 1.05;          // seconds to full charge
@@ -40,7 +41,7 @@ const GAP_MAX = MAX_DIST * REACH_SAFETY;   // = 5.33, hard cap so full charge al
 const SIZE_BASE = 0.95, SIZE_MIN = 0.62;   // smaller pads (harder landing)
 const SIZE_JITTER = 0.18;
 const DIFF_OVER = 42;             // platform index at which difficulty saturates
-const WARMUP = 3;                 // first N platforms forced wide + near, no death
+const WARMUP = 2;                 // first N platforms forced wide + near, no death
 
 const AHEAD = 6;                  // platforms to keep spawned ahead
 const BEHIND = 2;                 // recycle platforms more than this behind
@@ -69,7 +70,7 @@ export function startGame({ canvas, hud }){
   renderer.toneMappingExposure = 1.0;
 
   const scene = new THREE.Scene();
-  scene.fog = new THREE.Fog(0xa6d8de, 36, 74);   // cleaner cyan-blue haze (was muddy); matches sky
+  scene.fog = new THREE.Fog(0x9cc2e6, 36, 74);   // bluer sky-haze (was too cyan); matches sky mid
 
   // Orthographic 45° oblique (axonometric) — parallel lines, no vanishing point,
   // low elevation so the tall pillar front faces read (matches the reference).
@@ -84,9 +85,9 @@ export function startGame({ canvas, hud }){
     new THREE.ShaderMaterial({
       side: THREE.BackSide, depthWrite: false, fog: false,
       uniforms: {
-        top: { value: new THREE.Color(0x6cbecb) },   // cleaner cyan-blue
-        mid: { value: new THREE.Color(0x9bd2d6) },   // bright cyan-mint
-        bot: { value: new THREE.Color(0xcae8e8) },   // pale cyan horizon
+        top: { value: new THREE.Color(0x5aa3da) },   // deeper sky-BLUE crown
+        mid: { value: new THREE.Color(0x8cc0e8) },   // soft sky blue
+        bot: { value: new THREE.Color(0xc4e0f4) },   // pale blue horizon
         glow: { value: new THREE.Color(0xccdd8a) },  // lime-yellow corner
         glowDir: { value: new THREE.Vector3(-0.4, 0.72, 0.45).normalize() },   // upper-LEFT in screen space
       },
@@ -146,13 +147,47 @@ export function startGame({ canvas, hud }){
   window.addEventListener('resize', resize);
   resize();
 
-  const hero = buildHero();
-  scene.add(hero);
+  // ── Multi-character hero — reuse the convenience-store roster (each already
+  // carries a legL/legR/armL/armR rig). The character is wrapped in
+  //   root (world pos + squash) → flip (somersault pivot) → model (the person)
+  // so the existing jump code drives root.scale / flip.rotation unchanged, and
+  // the rig limbs animate through the leap. A fresh character is rolled each run
+  // (instant variety, no pre-game pick — stays true to the scroll-feed rule). ──
+  const ROSTER = ['shopkeeper', 'granny', 'oldman', 'blonde', 'kid', 'businessman',
+    'officeWoman', 'student', 'darkWoman', 'worker', 'teen', 'fitWoman', 'chef', 'bigGuy'];
+  const HERO_SCALE = 0.58;
+  let charIdx = Math.floor(Math.random() * ROSTER.length);
+  function pickChar(){ charIdx = (charIdx + 1) % ROSTER.length; return ROSTER[charIdx]; }
 
-  // ── limb animation rig — drive the hooded pilgrim's arms/legs through the
-  // jump (wind-up → push-off → airborne tuck → landing balance). Single-segment
-  // limbs rotated at the hip/shoulder; negative X swings forward/up. ──
-  const rig = hero.userData.rig;
+  let hero = null, rig = null, rigBase = null;
+  function buildHeroMesh(charKey){
+    const model = (CHARACTERS[charKey] || CHARACTERS.shopkeeper)();
+    model.scale.setScalar(HERO_SCALE);
+    model.rotation.y = -Math.PI * 0.18;     // face forward, turned a touch toward the camera so the face reads
+    const bb = new THREE.Box3().setFromObject(model);
+    const CENTER = (bb.max.y - bb.min.y) / 2;
+    const flip = new THREE.Group();
+    flip.position.y = CENTER;
+    model.position.y = -bb.min.y - CENTER;  // feet at root y=0, pivot at body centre
+    flip.add(model);
+    const root = new THREE.Group();
+    root.add(flip);
+    root.userData.isHero = true;
+    root.userData.flip = flip;
+    root.userData.rig = model.userData.rig || null;
+    return root;
+  }
+  function setHero(charKey){
+    if (hero) scene.remove(hero);
+    hero = buildHeroMesh(charKey);
+    scene.add(hero);
+    rig = hero.userData.rig;
+    rigBase = rig ? {
+      legL: rig.legL.rotation.x, legR: rig.legR.rotation.x,
+      armL: rig.armL.rotation.x, armR: rig.armR.rotation.x,
+    } : null;
+  }
+  setHero(ROSTER[charIdx]);
   const smooth = u => u * u * (3 - 2 * u);
   // piecewise track: keys = [[t,val],...] ascending, smooth-stepped between.
   function track(t, keys){
@@ -165,30 +200,32 @@ export function startGame({ canvas, hud }){
     }
     return keys[keys.length - 1][1];
   }
+  // All limb poses are added ON TOP of the character's rest pose (rigBase) so a
+  // figure that holds a prop keeps its offset. Negative X swings forward/up.
   function restPose(){
-    if (!rig) return;
-    rig.legL.rotation.set(0, 0, 0); rig.legR.rotation.set(0, 0, 0);
-    rig.armL.rotation.set(0, 0, 0); rig.armR.rotation.set(0, 0, 0);
+    if (!rig || !rigBase) return;
+    rig.legL.rotation.set(rigBase.legL, 0, 0); rig.legR.rotation.set(rigBase.legR, 0, 0);
+    rig.armL.rotation.set(rigBase.armL, 0, 0); rig.armR.rotation.set(rigBase.armR, 0, 0);
   }
   // coiled wind-up while charging (c: 0→1) — arms drawn back, legs splay back.
   function poseCharge(c){
-    if (!rig) return;
-    rig.armL.rotation.set(0.85 * c, 0, -0.12 * c);
-    rig.armR.rotation.set(0.85 * c, 0,  0.12 * c);
-    rig.legL.rotation.x = 0.22 * c; rig.legR.rotation.x = 0.22 * c;
+    if (!rig || !rigBase) return;
+    rig.armL.rotation.set(rigBase.armL + 0.85 * c, 0, -0.12 * c);
+    rig.armR.rotation.set(rigBase.armR + 0.85 * c, 0,  0.12 * c);
+    rig.legL.rotation.x = rigBase.legL + 0.22 * c; rig.legR.rotation.x = rigBase.legR + 0.22 * c;
   }
   // airborne sequence (t: 0→1) — push-off, tuck knees to chest + arms in, then
   // open out for the landing. A small L/R offset keeps it from reading robotic.
   const LEG_TRACK = [[0, 0.22], [0.16, 0.55], [0.42, -1.55], [0.66, -1.5], [0.9, 0.15], [1, 0]];
   const ARM_TRACK = [[0, 0.85], [0.13, -1.35], [0.45, -0.55], [0.78, -0.15], [1, 0]];
   function poseFlight(t){
-    if (!rig) return;
+    if (!rig || !rigBase) return;
     const leg = track(t, LEG_TRACK), arm = track(t, ARM_TRACK);
     const wobble = Math.sin(t * Math.PI) * 0.16;     // cycling life
-    rig.legL.rotation.x = leg + wobble; rig.legR.rotation.x = leg - wobble;
+    rig.legL.rotation.x = rigBase.legL + leg + wobble; rig.legR.rotation.x = rigBase.legR + leg - wobble;
     const splay = track(t, [[0.6, 0], [0.82, 0.5], [1, 0.12]]); // arms out to balance the landing
-    rig.armL.rotation.set(arm - wobble, 0, -splay);
-    rig.armR.rotation.set(arm + wobble, 0,  splay);
+    rig.armL.rotation.set(rigBase.armL + arm - wobble, 0, -splay);
+    rig.armR.rotation.set(rigBase.armR + arm + wobble, 0,  splay);
   }
 
   // distant skyline — a PARALLAX LAYER of many tiny faint towers. The whole
@@ -202,8 +239,13 @@ export function startGame({ canvas, hud }){
   function layoutBg(){
     for (let i = 0; i < bgItems.length; i++){
       const m = bgItems[i];
-      const side = i % 2 ? 1 : -1;
-      m.position.set(side * (5 + (i * 13 % 26)), -1.5 + (i * 7 % 5) * 0.5, (i * BG_STEP) % BG_SPAN);
+      // Keep the skyline on the FAR side of the rail (the -x side is the
+      // camera-near foreground — putting towers there made them crowd the play
+      // column). Bias to +x/+z (deep) and drop the TOPS well below the play line
+      // (y≈0) so they read as a low, distant band, never towering pillars.
+      const side = i % 4 === 0 ? -1 : 1;                 // a few on the near side, far out; most deep
+      const farX = side === 1 ? 13 + (i * 13 % 20) : -(20 + (i * 11 % 12));
+      m.position.set(farX, -2.6 - (i * 7 % 4) * 0.5, (i * BG_STEP) % BG_SPAN);
     }
   }
   function updateBg(){
@@ -495,6 +537,7 @@ export function startGame({ canvas, hud }){
     current = plats[0];
     while (plats[plats.length - 1].idx < AHEAD) spawnNext();
     score = 0; combo = 0; charge = 0; state = IDLE;
+    setHero(pickChar());                   // roll a fresh convenience-store character each run
     hero.position.set(0, PLAT_TOP, current.along);
     hero.scale.set(1, 1, 1);
     hero.rotation.set(0, 0, 0);
@@ -552,8 +595,12 @@ export function startGame({ canvas, hud }){
     }
     if (!landed){ die(); return; }
     current = landed;
-    hero.position.set(0, PLAT_TOP, landAlong);
     const eh = Math.max(0.12, landed.half - HERO_HALF);   // effective landing half
+    // Rest the hero ON the pad. Within tolerance it stands where it actually
+    // landed; a forced warm-up assist (landAlong off the pad) snaps to centre so
+    // the hero is never left standing in mid-air.
+    const onPad = Math.abs(landAlong - landed.along) <= eh;
+    hero.position.set(0, PLAT_TOP, onPad ? landAlong : landed.along);
     const d = Math.abs(landAlong - landed.along);
     if (d <= eh * 0.3){
       // PERFECT — gold burst + screen bounce + slow-mo + chime, combo escalates
@@ -686,7 +733,7 @@ export function startGame({ canvas, hud }){
       idleClock += gdt;
       const b = Math.sin(idleClock * 2.2) * 0.012;
       hero.scale.set(1, 1 + b, 1);
-      if (rig){ const sway = Math.sin(idleClock * 2.2) * 0.05; rig.armL.rotation.x = sway; rig.armR.rotation.x = sway; }
+      if (rig && rigBase){ const sway = Math.sin(idleClock * 2.2) * 0.05; rig.armL.rotation.x = rigBase.armL + sway; rig.armR.rotation.x = rigBase.armR + sway; }
     }
 
     // expanding release pulse

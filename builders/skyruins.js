@@ -10,14 +10,14 @@
 // group.userData.runeMeshes.
 
 import * as THREE from 'three';
-import { P, box, cone, darken } from '../lib/prims.js';
+import { P, box, darken } from '../lib/prims.js';
 
 // Mid warm-pastel pillar-top tones (peach / dusty-rose / cream / mauve).
 export const STONE_TONES = [0xe6bcae, 0xd9aeae, 0xe9cbac, 0xceb2bd];
 const PAD = 0xf2e6a8;                 // pale yellow glowing landing pad (ref)
 const PILLAR_H = 16;                  // pillars run from y=0 down to y=-16
-const PILLAR_TOP = 0xeeb4b8;          // brighter rose-pink top (higher value)
-const PILLAR_BOT = 0xf9eede;          // brighter cream bottom — fades to light & dissolves
+const PILLAR_TOP = 0xf09ab0;          // saturated rose-pink top (pinker per ref)
+const PILLAR_BOT = 0xf4ccd6;          // pale PINK bottom (stays in the pink family, not cream)
 
 const clamp01 = v => Math.max(0, Math.min(1, v));
 
@@ -46,68 +46,9 @@ function gradPillarMesh(w, d, topColor = PILLAR_TOP, h = PILLAR_H, botColor = PI
   return m;
 }
 
-// ── Hero — hooded sky-pilgrim, now with articulated limbs. Structure:
-//   root  (world position + squash on root.scale, feet-pivoted at y=0)
-//    └ flip (rotation pivot at body center → somersault during the leap)
-//       └ model (the parts, scaled up so the hero reads bigger on the wide pads)
-//          ├ legL/legR  (hip-pivot groups → tuck/extend during the jump)
-//          └ armL/armR  (shoulder-pivot groups → wind-up / throw / balance)
-// game.js drives root.userData.flip.rotation.x (somersault) AND
-// root.userData.rig.{legL,legR,armL,armR}.rotation.x (limb animation). ──
-const HERO_SCALE = 1.4;
-const ROBE = P.cream, ROBE_D = P.panelD, FACE = 0xe9cbac, EYE = 0x2a2622;
-export function hero(){
-  const root = new THREE.Group();
-  const flip = new THREE.Group();
-  const model = new THREE.Group();
-
-  // ── legs (hip-pivot groups; the leg hangs down so the foot sits at y≈0) ──
-  const HIP_Y = 0.30, THIGH = 0.28;
-  const legL = new THREE.Group(), legR = new THREE.Group();
-  legL.position.set(-0.115, HIP_Y, 0);
-  legR.position.set( 0.115, HIP_Y, 0);
-  [legL, legR].forEach(L => {
-    L.add(box(0.135, THIGH, 0.15, ROBE_D, 0, -THIGH / 2, 0));                  // shin
-    L.add(box(0.17, 0.09, 0.24, P.ironD, 0, -THIGH + 0.045 - 0.01, 0.045));    // foot (toes forward)
-  });
-  model.add(legL); model.add(legR);
-
-  // ── robe / tunic torso (static) ──
-  model.add(box(0.46, 0.36, 0.40, ROBE, 0, 0.46, 0));                          // lower tunic (over hips)
-  model.add(box(0.50, 0.07, 0.42, P.gold, 0, 0.52, 0, { e: P.gold, ei: 0.16 })); // belt
-  model.add(box(0.40, 0.32, 0.36, ROBE, 0, 0.74, 0));                          // chest
-  model.add(box(0.22, 0.24, 0.05, P.accent, 0, 0.74, 0.19, { e: P.accent, ei: 0.85 })); // teal emblem (front)
-
-  // ── arms (shoulder-pivot groups) ──
-  const SHO_Y = 0.86, ARM = 0.32;
-  const armL = new THREE.Group(), armR = new THREE.Group();
-  armL.position.set(-0.275, SHO_Y, 0);
-  armR.position.set( 0.275, SHO_Y, 0);
-  [armL, armR].forEach(A => {
-    A.add(box(0.115, ARM * 0.7, 0.13, ROBE, 0, -ARM * 0.35, 0));               // sleeve
-    A.add(box(0.115, ARM * 0.32, 0.115, FACE, 0, -ARM * 0.84, 0));             // hand
-  });
-  model.add(armL); model.add(armR);
-
-  // ── neck + face + pointed hood ──
-  model.add(box(0.11, 0.10, 0.24, ROBE, 0, 0.92, 0));                          // neck/cowl
-  model.add(box(0.26, 0.23, 0.27, FACE, 0, 1.05, 0));                          // face block
-  model.add(box(0.05, 0.06, 0.04, EYE, -0.06, 1.06, 0.135));                   // eyes
-  model.add(box(0.05, 0.06, 0.04, EYE,  0.06, 1.06, 0.135));
-  model.add(cone(0.25, 0.34, 6, ROBE_D, 0, 1.26, 0));                          // pointed hood
-  model.add(box(0.07, 0.07, 0.07, P.accent, 0, 1.46, 0, { e: P.accent, ei: 1.0 })); // teal tip
-
-  model.scale.setScalar(HERO_SCALE);
-  const CENTER = 0.62 * HERO_SCALE;     // flip pivots around the body's centre of mass
-  flip.position.y = CENTER;
-  model.position.y = -CENTER;           // keep feet at y=0 when flip.rotation = 0
-  flip.add(model);
-  root.add(flip);
-  root.userData.isHero = true;
-  root.userData.flip = flip;
-  root.userData.rig = { legL, legR, armL, armR };
-  return root;
-}
+// The hero is built from the shared convenience-store character roster
+// (builders/characters.js) — see game.js buildHeroMesh(). No hero builder lives
+// here anymore; this module only makes the pillars + skyline.
 
 // Glowing pale landing pad inset on a pillar top. Returns it for landing-pulse.
 function padTop(g, half, w, ei = 0.05){
@@ -152,9 +93,9 @@ export function runeDisk(half, w){
 export function bgPillars(n = 28){
   const g = new THREE.Group();
   for (let i = 0; i < n; i++){
-    const w = 0.28 + (i * 17 % 4) / 12;                      // VERY thin (0.28–0.53) → reads small/far
-    const h = 6 + (i * 23 % 6);                              // moderate height (6–11), not towering
-    const m = gradPillarMesh(w, w, 0x9cd0d4, h, 0xbadee2);   // tiny, faint cyan → fog dissolves into sky
+    const w = 0.26 + (i * 17 % 4) / 14;                      // VERY thin (0.26–0.47) → reads small/far
+    const h = 3.5 + (i * 23 % 5) * 0.5;                      // SHORT (3.5–5.5) → a low distant band, never towering
+    const m = gradPillarMesh(w, w, 0xa6c6e2, h, 0xc6dcee);   // faint bluish → nearly dissolves into the fog/sky
     m.castShadow = false; m.receiveShadow = false;
     g.add(m);
   }
