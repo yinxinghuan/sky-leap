@@ -16,8 +16,8 @@ import { P, box, cone, darken } from '../lib/prims.js';
 export const STONE_TONES = [0xe6bcae, 0xd9aeae, 0xe9cbac, 0xceb2bd];
 const PAD = 0xf2e6a8;                 // pale yellow glowing landing pad (ref)
 const PILLAR_H = 16;                  // pillars run from y=0 down to y=-16
-const PILLAR_TOP = 0xdfa3a8;          // rose-pink top (ref)
-const PILLAR_BOT = 0xf4e6d2;          // pale cream bottom — body fades to light & dissolves
+const PILLAR_TOP = 0xeeb4b8;          // brighter rose-pink top (higher value)
+const PILLAR_BOT = 0xf9eede;          // brighter cream bottom — fades to light & dissolves
 
 const clamp01 = v => Math.max(0, Math.min(1, v));
 
@@ -116,11 +116,12 @@ export function runeDisk(half, w){
 // "far" (ortho has no perspective shrink); the long bodies sink deep into the
 // fog so the bottoms dissolve and nothing floats. game.js lays them out +
 // recycles them past the hero. ──
-export function bgPillars(n = 14){
+export function bgPillars(n = 28){
   const g = new THREE.Group();
   for (let i = 0; i < n; i++){
-    const w = 0.5 + (i * 29 % 5) / 10;                       // thin (0.5–0.9)
-    const m = gradPillarMesh(w, w, 0x8cc6ba, 26, 0xaad1c5);  // long, very faint → fog fades it into the sky
+    const w = 0.28 + (i * 17 % 4) / 12;                      // VERY thin (0.28–0.53) → reads small/far
+    const h = 6 + (i * 23 % 6);                              // moderate height (6–11), not towering
+    const m = gradPillarMesh(w, w, 0x9cd0d4, h, 0xbadee2);   // tiny, faint cyan → fog dissolves into sky
     m.castShadow = false; m.receiveShadow = false;
     g.add(m);
   }

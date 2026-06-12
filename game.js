@@ -14,12 +14,12 @@ import { EffectComposer } from 'three/addons/postprocessing/EffectComposer.js';
 import { RenderPass } from 'three/addons/postprocessing/RenderPass.js';
 import { UnrealBloomPass } from 'three/addons/postprocessing/UnrealBloomPass.js';
 import { OutputPass } from 'three/addons/postprocessing/OutputPass.js';
-import { hero as buildHero, platStone, platPillar, runeDisk, bgPillars, STONE_TONES } from './builders/skyruins.js?v=26';
+import { hero as buildHero, platStone, platPillar, runeDisk, bgPillars, STONE_TONES } from './builders/skyruins.js?v=27';
 
 // --- tunables ---------------------------------------------------------------
 const CHARGE_MAX = 1.05;          // seconds to full charge
 const MIN_DIST = 2.5;             // jump distance at zero charge
-const MAX_DIST = 9.5;             // jump distance at full charge (pillars spread further)
+const MAX_DIST = 11.5;            // jump distance at full charge (bigger gaps)
 const BASE_H = 1.2;               // arc apex height at zero charge
 const PEAK_H = 2.1;               // extra apex height at full charge
 const AIR_BASE = 0.42;            // flight time at zero charge
@@ -28,15 +28,16 @@ const AIR_EXTRA = 0.30;           // extra flight time at full charge
 const RAIL_W = 2.0;               // platform lateral width (x) -- single rail
 const PLAT_H = 0.7;               // platform block height (top sits at y=0)
 const PLAT_TOP = 0;               // hero stands on y=0
+const HERO_HALF = 0.32;           // hero body half-depth — must be fully on the pad to land (no floating-edge)
 
 // world generation -- the reachability invariant lives here.
 // KEY: gap (center-to-center) must exceed platform LENGTH (2*half) so there's
 // visible void between pads — otherwise platforms merge into a continuous road.
 const REACH_SAFETY = 0.86;
-const GAP_NEAR = 5.0, GAP_FAR = 8.0;       // gap (center-to-center) — spread out so only the next 1-2 pads show
+const GAP_NEAR = 6.5, GAP_FAR = 9.5;       // gaps spread further (harder)
 const GAP_JITTER = 0.3;
 const GAP_MAX = MAX_DIST * REACH_SAFETY;   // = 5.33, hard cap so full charge always reaches
-const SIZE_BASE = 1.1, SIZE_MIN = 0.7;     // platform half-length (along) easy->hard
+const SIZE_BASE = 0.95, SIZE_MIN = 0.62;   // smaller pads (harder landing)
 const SIZE_JITTER = 0.18;
 const DIFF_OVER = 42;             // platform index at which difficulty saturates
 const WARMUP = 3;                 // first N platforms forced wide + near, no death
@@ -68,7 +69,7 @@ export function startGame({ canvas, hud }){
   renderer.toneMappingExposure = 1.0;
 
   const scene = new THREE.Scene();
-  scene.fog = new THREE.Fog(0x8ccabf, 36, 72);   // fog ≈ sky teal; tighter so far skyline dissolves
+  scene.fog = new THREE.Fog(0xa6d8de, 36, 74);   // cleaner cyan-blue haze (was muddy); matches sky
 
   // Orthographic 45° oblique (axonometric) — parallel lines, no vanishing point,
   // low elevation so the tall pillar front faces read (matches the reference).
@@ -83,9 +84,9 @@ export function startGame({ canvas, hud }){
     new THREE.ShaderMaterial({
       side: THREE.BackSide, depthWrite: false, fog: false,
       uniforms: {
-        top: { value: new THREE.Color(0x76c3ba) },   // soft teal-cyan
-        mid: { value: new THREE.Color(0x8ccabf) },   // teal-mint
-        bot: { value: new THREE.Color(0xc2ded0) },   // pale mint horizon
+        top: { value: new THREE.Color(0x6cbecb) },   // cleaner cyan-blue
+        mid: { value: new THREE.Color(0x9bd2d6) },   // bright cyan-mint
+        bot: { value: new THREE.Color(0xcae8e8) },   // pale cyan horizon
         glow: { value: new THREE.Color(0xccdd8a) },  // lime-yellow corner
         glowDir: { value: new THREE.Vector3(-0.4, 0.72, 0.45).normalize() },   // upper-LEFT in screen space
       },
@@ -148,24 +149,27 @@ export function startGame({ canvas, hud }){
   const hero = buildHero();
   scene.add(hero);
 
-  // distant skyline — small/long 3D pillars in the WORLD (real parallax), laid
-  // out beside the rail and recycled past the hero. Far ones are fog-faded; new
-  // ones recycle in deep behind the fog so there's no visible pop-in.
-  const bg = bgPillars(14);
+  // distant skyline — a PARALLAX LAYER of many tiny faint towers. The whole
+  // group drifts at 0.7× the camera (slower than the foreground → parallax), and
+  // each tower wraps around so the band is always populated.
+  const bg = bgPillars(28);
   scene.add(bg);
   const bgItems = bg.children;
-  const BG_STEP = 5, BG_SPAN = bgItems.length * BG_STEP;
-  function layoutBg(baseZ){
+  const BG_STEP = 3.2, BG_SPAN = bgItems.length * BG_STEP;
+  const BG_PARALLAX = 0.7;          // <1 → drifts slower than the camera
+  function layoutBg(){
     for (let i = 0; i < bgItems.length; i++){
       const m = bgItems[i];
-      // FAR (z+20..) so heavy fog fades them; LOW tops (y ≈ 0) so the ortho
-      // z-recession lifts them to the horizon instead of off the top of frame.
-      m.position.set((i % 2 ? 1 : -1) * (8 + (i * 7 % 16)), -1 + (i * 7 % 4) * 0.6, baseZ + 20 + i * BG_STEP);
+      const side = i % 2 ? 1 : -1;
+      m.position.set(side * (5 + (i * 13 % 26)), -1.5 + (i * 7 % 5) * 0.5, (i * BG_STEP) % BG_SPAN);
     }
   }
-  function recycleBg(){
+  function updateBg(){
+    bg.position.z = camFocus.z * BG_PARALLAX;
     for (const m of bgItems){
-      if (m.position.z < hero.position.z - 6) m.position.z += BG_SPAN;   // scroll past → recycle deep ahead
+      const worldZ = bg.position.z + m.position.z;
+      if (worldZ < camFocus.z - 14) m.position.z += BG_SPAN;          // wrapped behind → ahead
+      else if (worldZ > camFocus.z + BG_SPAN) m.position.z -= BG_SPAN; // (safety) wrap back
     }
   }
 
@@ -461,7 +465,7 @@ export function startGame({ canvas, hud }){
     camFocus.set(-1, 0.6, current.along);
     camera.position.set(camFocus.x + ISO_DIR.x * ISO_DIST, camFocus.y + ISO_DIR.y * ISO_DIST, camFocus.z + ISO_DIR.z * ISO_DIST);
     camera.lookAt(camFocus);
-    layoutBg(current.along);
+    layoutBg();
     hud.setScore(0); hud.setCombo(0); hud.setReady(true); hud.setDead(null);
   }
 
@@ -493,10 +497,12 @@ export function startGame({ canvas, hud }){
 
   function judgeLanding(){
     const landAlong = startAlong + dist;
+    // The hero must be FULLY on the pad — its body half-depth has to clear the
+    // edge, else it's "standing in the air" → a miss (matches the visuals).
     let landed = null;
     for (const p of plats){
       if (p.idx <= current.idx) continue;
-      if (Math.abs(landAlong - p.along) <= p.half){ landed = p; break; }
+      if (Math.abs(landAlong - p.along) <= p.half - HERO_HALF){ landed = p; break; }
     }
     if (!landed && current.idx < WARMUP){
       landed = plats.find(p => p.idx === current.idx + 1) || null;
@@ -504,8 +510,9 @@ export function startGame({ canvas, hud }){
     if (!landed){ die(); return; }
     current = landed;
     hero.position.set(0, PLAT_TOP, landAlong);
+    const eh = Math.max(0.12, landed.half - HERO_HALF);   // effective landing half
     const d = Math.abs(landAlong - landed.along);
-    if (d <= landed.half * 0.22){
+    if (d <= eh * 0.3){
       // PERFECT — gold burst + screen bounce + slow-mo + chime, combo escalates
       combo += 1;
       score += 3;   // 1 platform + 2 perfect bonus (monotonic)
@@ -517,7 +524,7 @@ export function startGame({ canvas, hud }){
       doSlow(0.42, 0.18);
       sfxPerfect(combo);
       hud.pop(combo >= 2 ? 'PERFECT ×' + combo : 'PERFECT');
-    } else if (d <= landed.half * 0.70){
+    } else if (d <= eh * 0.7){
       // GOOD — keep combo, soft dust
       score += 1;
       flashPlatform(landed, false);
@@ -654,7 +661,7 @@ export function startGame({ canvas, hud }){
 
     updateParticles(gdt);
     updateCamera(gdt);
-    recycleBg();
+    updateBg();
     composer.render();
   }
 
