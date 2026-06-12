@@ -14,7 +14,7 @@ import { EffectComposer } from 'three/addons/postprocessing/EffectComposer.js';
 import { RenderPass } from 'three/addons/postprocessing/RenderPass.js';
 import { UnrealBloomPass } from 'three/addons/postprocessing/UnrealBloomPass.js';
 import { OutputPass } from 'three/addons/postprocessing/OutputPass.js';
-import { hero as buildHero, platStone, platPillar, runeDisk, cloudField, bgRuins, STONE_TONES } from './builders/skyruins.js?v=7';
+import { hero as buildHero, platStone, platPillar, runeDisk, bgPillars, STONE_TONES } from './builders/skyruins.js?v=13';
 
 // --- tunables ---------------------------------------------------------------
 const CHARGE_MAX = 1.05;          // seconds to full charge
@@ -44,8 +44,9 @@ const WARMUP = 3;                 // first N platforms forced wide + near, no de
 const AHEAD = 6;                  // platforms to keep spawned ahead
 const BEHIND = 2;                 // recycle platforms more than this behind
 
-const CAM_BACK = 6.6;             // camera distance behind hero (smaller z)
-const CAM_UP = 4.8;               // camera height (raised to see more of the rail)
+const CAM_BACK = 6.5;             // camera distance behind hero (along -z)
+const CAM_SIDE = 6.5;             // camera offset to the side (along -x) → 45° oblique azimuth
+const CAM_UP = 5.0;               // camera height
 const CAM_LERP = 5;               // follow responsiveness (per second)
 const CAM_LOOK_AHEAD = 0.42;      // how far toward the next platform the look-target sits
 
@@ -64,10 +65,10 @@ export function startGame({ canvas, hud }){
   renderer.shadowMap.enabled = true;
   renderer.shadowMap.type = THREE.PCFSoftShadowMap;
   renderer.toneMapping = THREE.ACESFilmicToneMapping;
-  renderer.toneMappingExposure = 1.18;
+  renderer.toneMappingExposure = 1.0;
 
   const scene = new THREE.Scene();
-  scene.fog = new THREE.Fog(0xe6a86a, 26, 70);   // warm golden haze
+  scene.fog = new THREE.Fog(0xd4e0d6, 34, 86);   // subtle haze — only the far distance softens
 
   const camera = new THREE.PerspectiveCamera(55, 1, 0.1, 400);
   const camLook = new THREE.Vector3();
@@ -78,9 +79,9 @@ export function startGame({ canvas, hud }){
     new THREE.ShaderMaterial({
       side: THREE.BackSide, depthWrite: false, fog: false,
       uniforms: {
-        top: { value: new THREE.Color(0x2a1c46) },
-        mid: { value: new THREE.Color(0x9c4f78) },
-        bot: { value: new THREE.Color(0xf2b066) },
+        top: { value: new THREE.Color(0x6fb8b0) },   // soft teal zenith
+        mid: { value: new THREE.Color(0xbfdcc8) },   // pale mint band
+        bot: { value: new THREE.Color(0xf2cdbf) },   // soft peach horizon
       },
       vertexShader: 'varying vec3 vP; void main(){ vP = position; gl_Position = projectionMatrix * modelViewMatrix * vec4(position,1.0); }',
       fragmentShader: 'varying vec3 vP; uniform vec3 top; uniform vec3 mid; uniform vec3 bot; void main(){ float h = normalize(vP).y; vec3 c = h > 0.0 ? mix(mid, top, clamp(h*1.25,0.0,1.0)) : mix(mid, bot, clamp(-h*1.8,0.0,1.0)); gl_FragColor = vec4(c,1.0); }',
@@ -88,17 +89,10 @@ export function startGame({ canvas, hud }){
   );
   scene.add(sky);
 
-  // ── Sun on the horizon — bright, blooms into a golden flare ──
-  const sun = new THREE.Mesh(
-    new THREE.SphereGeometry(4.2, 24, 24),
-    new THREE.MeshBasicMaterial({ color: 0xffe8bc, fog: false })
-  );
-  scene.add(sun);
-
-  // ── Golden-hour lighting: low warm key (long shadows) + warm rim + cool fill ──
-  scene.add(new THREE.HemisphereLight(0xffe0c0, 0x3a2c4a, 0.55));
-  const key = new THREE.DirectionalLight(0xffd49a, 1.75);
-  key.position.set(-12, 8, 6);     // low + side → long dramatic shadows
+  // ── Soft, even pastel lighting (low contrast, airy — no hard sun) ──
+  scene.add(new THREE.HemisphereLight(0xeaf4ee, 0xf2dcd2, 0.5));    // soft sky/ground fill
+  const key = new THREE.DirectionalLight(0xfff4e8, 1.0);
+  key.position.set(-7, 13, 6);     // higher + softer → gentle short shadows
   key.castShadow = true;
   key.shadow.mapSize.set(1024, 1024);
   key.shadow.camera.near = 1; key.shadow.camera.far = 80;
@@ -106,12 +100,9 @@ export function startGame({ canvas, hud }){
   key.shadow.camera.top = 18; key.shadow.camera.bottom = -18;
   key.shadow.bias = -0.0005;
   scene.add(key);
-  const rim = new THREE.DirectionalLight(0xffcf8a, 0.6);
-  rim.position.set(6, 4, -12);     // warm back-rim for golden edges
+  const rim = new THREE.DirectionalLight(0xdaf0ea, 0.3);
+  rim.position.set(6, 5, -12);     // cool mint back-rim
   scene.add(rim);
-  const fill = new THREE.DirectionalLight(0x9ab0e0, 0.22);
-  fill.position.set(9, 5, 3);      // cool low fill keeps shadows from going dead
-  scene.add(fill);
 
   // ── Floating dust motes — warm, additive, catch the light (golden-hour life) ──
   const MOTES = 150;
@@ -132,7 +123,7 @@ export function startGame({ canvas, hud }){
   // ── Bloom post-processing — the core "lavish" lever (emissives + sun glow) ──
   const composer = new EffectComposer(renderer);
   composer.addPass(new RenderPass(scene, camera));
-  const bloom = new UnrealBloomPass(new THREE.Vector2(1, 1), 0.75, 0.6, 0.62);
+  const bloom = new UnrealBloomPass(new THREE.Vector2(1, 1), 0.4, 0.5, 0.85);
   composer.addPass(bloom);
   composer.addPass(new OutputPass());
 
@@ -149,13 +140,9 @@ export function startGame({ canvas, hud }){
   const hero = buildHero();
   scene.add(hero);
 
-  // cloud sea — follows the hero so the void below is always filled
-  const clouds = cloudField();
-  scene.add(clouds);
-
-  // distant ruin silhouettes — far-background depth, trails the hero on the horizon
-  const bgr = bgRuins();
-  scene.add(bgr);
+  // distant skyline of faint pillars — trails the hero for constant depth
+  const bg = bgPillars();
+  scene.add(bg);
 
   // charge ring (ground, grows with charge)
   const ring = new THREE.Mesh(
@@ -445,8 +432,8 @@ export function startGame({ canvas, hud }){
     pulseRing.visible = false; pulseT = 0;
     aimArc.visible = false; flightPath = []; arcFade = 0;
     slow = 0; timeScale = 1; camKick = 0;
-    camera.position.set(0, CAM_UP, current.along - CAM_BACK);
-    camLook.set(0, 0.5, current.along);
+    camera.position.set(-CAM_SIDE, CAM_UP, current.along - CAM_BACK);
+    camLook.set(-1.2, 0.2, current.along + 1);
     camera.lookAt(camLook);
     hud.setScore(0); hud.setCombo(0); hud.setReady(true); hud.setDead(null);
   }
@@ -526,7 +513,7 @@ export function startGame({ canvas, hud }){
 
   function flashPlatform(p, perfect){
     const m = p.mesh.userData.runeMat;
-    if (m) m.emissiveIntensity = perfect ? 1.3 : 0.55;
+    if (m) m.emissiveIntensity = perfect ? 1.0 : 0.5;
   }
 
   function die(){
@@ -558,15 +545,15 @@ export function startGame({ canvas, hud }){
       ty += 0.8 * apex * Math.sin(Math.PI * t) * 0.25;
     }
     if (state !== FALLING){
-      camera.position.x = lerp(camera.position.x, 0, CAM_LERP * dt);
+      camera.position.x = lerp(camera.position.x, -CAM_SIDE, CAM_LERP * dt);
       camera.position.y = lerp(camera.position.y, ty, CAM_LERP * dt);
       camera.position.z = lerp(camera.position.z, tz, CAM_LERP * dt);
     }
     const next = plats.find(p => p.idx === current.idx + 1);
     const aheadZ = next ? next.along : hero.position.z + 3;
     const lookZ = lerp(hero.position.z, aheadZ, CAM_LOOK_AHEAD);
-    camLook.x = lerp(camLook.x, 0, CAM_LERP * dt);
-    camLook.y = lerp(camLook.y, 0.4, CAM_LERP * dt);
+    camLook.x = lerp(camLook.x, -1.2, CAM_LERP * dt);   // bias so the oblique rail sits centered
+    camLook.y = lerp(camLook.y, 0.2, CAM_LERP * dt);
     camLook.z = lerp(camLook.z, lookZ, CAM_LERP * dt);
     camera.lookAt(camLook);
   }
@@ -586,13 +573,8 @@ export function startGame({ canvas, hud }){
 
     // backdrop trails the hero so it's always present
     const hz = hero.position.z;
-    clouds.position.z = hz;
-    bgr.position.z = hz;
+    bg.position.z = hz;
     sky.position.set(camera.position.x, camera.position.y, camera.position.z);
-    sun.position.set(-26, 10, hz + 60);   // golden sun on the left horizon ahead
-    for (const c of clouds.children){
-      c.position.y = c.userData.baseY + Math.sin(now / 1000 * 0.5 + c.userData.bob) * 0.12;
-    }
     // dust motes: drift up + slow sideways, wrap within a box around the hero
     motes.position.z = hz;
     const mp = motes.geometry.attributes.position;
