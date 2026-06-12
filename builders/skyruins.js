@@ -46,33 +46,66 @@ function gradPillarMesh(w, d, topColor = PILLAR_TOP, h = PILLAR_H, botColor = PI
   return m;
 }
 
-// ── Hero — hooded sky-pilgrim. Structure for animation:
+// ── Hero — hooded sky-pilgrim, now with articulated limbs. Structure:
 //   root  (world position + squash on root.scale, feet-pivoted at y=0)
 //    └ flip (rotation pivot at body center → somersault during the leap)
 //       └ model (the parts, scaled up so the hero reads bigger on the wide pads)
-// game.js sets root.userData.flip.rotation.x for the jump somersault. ──
-const HERO_SCALE = 1.5;
+//          ├ legL/legR  (hip-pivot groups → tuck/extend during the jump)
+//          └ armL/armR  (shoulder-pivot groups → wind-up / throw / balance)
+// game.js drives root.userData.flip.rotation.x (somersault) AND
+// root.userData.rig.{legL,legR,armL,armR}.rotation.x (limb animation). ──
+const HERO_SCALE = 1.4;
+const ROBE = P.cream, ROBE_D = P.panelD, FACE = 0xe9cbac, EYE = 0x2a2622;
 export function hero(){
   const root = new THREE.Group();
   const flip = new THREE.Group();
   const model = new THREE.Group();
-  model.add(box(0.44, 0.40, 0.40, P.panelD, 0, 0.20, 0));
-  model.add(box(0.46, 0.05, 0.42, P.gold, 0, 0.39, 0, { e: P.gold, ei: 0.18 }));
-  model.add(box(0.40, 0.34, 0.36, P.cream, 0, 0.57, 0));
-  model.add(box(0.11, 0.30, 0.13, P.panelD, 0.255, 0.55, 0));
-  model.add(box(0.11, 0.30, 0.13, P.panelD, -0.255, 0.55, 0));
-  model.add(box(0.24, 0.28, 0.08, P.accent, 0, 0.60, -0.21, { e: P.accent, ei: 0.95 }));
-  model.add(box(0.28, 0.26, 0.28, P.cream, 0, 0.85, 0));
-  model.add(cone(0.24, 0.30, 6, P.panelD, 0, 1.02, 0));
-  model.add(box(0.08, 0.08, 0.08, P.accent, 0, 1.17, 0, { e: P.accent, ei: 1.0 }));
+
+  // ── legs (hip-pivot groups; the leg hangs down so the foot sits at y≈0) ──
+  const HIP_Y = 0.30, THIGH = 0.28;
+  const legL = new THREE.Group(), legR = new THREE.Group();
+  legL.position.set(-0.115, HIP_Y, 0);
+  legR.position.set( 0.115, HIP_Y, 0);
+  [legL, legR].forEach(L => {
+    L.add(box(0.135, THIGH, 0.15, ROBE_D, 0, -THIGH / 2, 0));                  // shin
+    L.add(box(0.17, 0.09, 0.24, P.ironD, 0, -THIGH + 0.045 - 0.01, 0.045));    // foot (toes forward)
+  });
+  model.add(legL); model.add(legR);
+
+  // ── robe / tunic torso (static) ──
+  model.add(box(0.46, 0.36, 0.40, ROBE, 0, 0.46, 0));                          // lower tunic (over hips)
+  model.add(box(0.50, 0.07, 0.42, P.gold, 0, 0.52, 0, { e: P.gold, ei: 0.16 })); // belt
+  model.add(box(0.40, 0.32, 0.36, ROBE, 0, 0.74, 0));                          // chest
+  model.add(box(0.22, 0.24, 0.05, P.accent, 0, 0.74, 0.19, { e: P.accent, ei: 0.85 })); // teal emblem (front)
+
+  // ── arms (shoulder-pivot groups) ──
+  const SHO_Y = 0.86, ARM = 0.32;
+  const armL = new THREE.Group(), armR = new THREE.Group();
+  armL.position.set(-0.275, SHO_Y, 0);
+  armR.position.set( 0.275, SHO_Y, 0);
+  [armL, armR].forEach(A => {
+    A.add(box(0.115, ARM * 0.7, 0.13, ROBE, 0, -ARM * 0.35, 0));               // sleeve
+    A.add(box(0.115, ARM * 0.32, 0.115, FACE, 0, -ARM * 0.84, 0));             // hand
+  });
+  model.add(armL); model.add(armR);
+
+  // ── neck + face + pointed hood ──
+  model.add(box(0.11, 0.10, 0.24, ROBE, 0, 0.92, 0));                          // neck/cowl
+  model.add(box(0.26, 0.23, 0.27, FACE, 0, 1.05, 0));                          // face block
+  model.add(box(0.05, 0.06, 0.04, EYE, -0.06, 1.06, 0.135));                   // eyes
+  model.add(box(0.05, 0.06, 0.04, EYE,  0.06, 1.06, 0.135));
+  model.add(cone(0.25, 0.34, 6, ROBE_D, 0, 1.26, 0));                          // pointed hood
+  model.add(box(0.07, 0.07, 0.07, P.accent, 0, 1.46, 0, { e: P.accent, ei: 1.0 })); // teal tip
+
   model.scale.setScalar(HERO_SCALE);
-  const CENTER = 0.55 * HERO_SCALE;     // flip pivots around the body's mid-height
+  const CENTER = 0.62 * HERO_SCALE;     // flip pivots around the body's centre of mass
   flip.position.y = CENTER;
   model.position.y = -CENTER;           // keep feet at y=0 when flip.rotation = 0
   flip.add(model);
   root.add(flip);
   root.userData.isHero = true;
   root.userData.flip = flip;
+  root.userData.rig = { legL, legR, armL, armR };
   return root;
 }
 

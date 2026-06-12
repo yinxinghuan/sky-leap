@@ -14,7 +14,7 @@ import { EffectComposer } from 'three/addons/postprocessing/EffectComposer.js';
 import { RenderPass } from 'three/addons/postprocessing/RenderPass.js';
 import { UnrealBloomPass } from 'three/addons/postprocessing/UnrealBloomPass.js';
 import { OutputPass } from 'three/addons/postprocessing/OutputPass.js';
-import { hero as buildHero, platStone, platPillar, runeDisk, bgPillars, STONE_TONES } from './builders/skyruins.js?v=27';
+import { hero as buildHero, platStone, platPillar, runeDisk, bgPillars, STONE_TONES } from './builders/skyruins.js?v=28';
 
 // --- tunables ---------------------------------------------------------------
 const CHARGE_MAX = 1.05;          // seconds to full charge
@@ -148,6 +148,48 @@ export function startGame({ canvas, hud }){
 
   const hero = buildHero();
   scene.add(hero);
+
+  // ── limb animation rig — drive the hooded pilgrim's arms/legs through the
+  // jump (wind-up → push-off → airborne tuck → landing balance). Single-segment
+  // limbs rotated at the hip/shoulder; negative X swings forward/up. ──
+  const rig = hero.userData.rig;
+  const smooth = u => u * u * (3 - 2 * u);
+  // piecewise track: keys = [[t,val],...] ascending, smooth-stepped between.
+  function track(t, keys){
+    if (t <= keys[0][0]) return keys[0][1];
+    for (let i = 1; i < keys.length; i++){
+      if (t <= keys[i][0]){
+        const a = keys[i - 1], b = keys[i];
+        return a[1] + (b[1] - a[1]) * smooth((t - a[0]) / (b[0] - a[0]));
+      }
+    }
+    return keys[keys.length - 1][1];
+  }
+  function restPose(){
+    if (!rig) return;
+    rig.legL.rotation.set(0, 0, 0); rig.legR.rotation.set(0, 0, 0);
+    rig.armL.rotation.set(0, 0, 0); rig.armR.rotation.set(0, 0, 0);
+  }
+  // coiled wind-up while charging (c: 0→1) — arms drawn back, legs splay back.
+  function poseCharge(c){
+    if (!rig) return;
+    rig.armL.rotation.set(0.85 * c, 0, -0.12 * c);
+    rig.armR.rotation.set(0.85 * c, 0,  0.12 * c);
+    rig.legL.rotation.x = 0.22 * c; rig.legR.rotation.x = 0.22 * c;
+  }
+  // airborne sequence (t: 0→1) — push-off, tuck knees to chest + arms in, then
+  // open out for the landing. A small L/R offset keeps it from reading robotic.
+  const LEG_TRACK = [[0, 0.22], [0.16, 0.55], [0.42, -1.55], [0.66, -1.5], [0.9, 0.15], [1, 0]];
+  const ARM_TRACK = [[0, 0.85], [0.13, -1.35], [0.45, -0.55], [0.78, -0.15], [1, 0]];
+  function poseFlight(t){
+    if (!rig) return;
+    const leg = track(t, LEG_TRACK), arm = track(t, ARM_TRACK);
+    const wobble = Math.sin(t * Math.PI) * 0.16;     // cycling life
+    rig.legL.rotation.x = leg + wobble; rig.legR.rotation.x = leg - wobble;
+    const splay = track(t, [[0.6, 0], [0.82, 0.5], [1, 0.12]]); // arms out to balance the landing
+    rig.armL.rotation.set(arm - wobble, 0, -splay);
+    rig.armR.rotation.set(arm + wobble, 0,  splay);
+  }
 
   // distant skyline — a PARALLAX LAYER of many tiny faint towers. The whole
   // group drifts at 0.7× the camera (slower than the foreground → parallax), and
@@ -457,6 +499,7 @@ export function startGame({ canvas, hud }){
     hero.scale.set(1, 1, 1);
     hero.rotation.set(0, 0, 0);
     hero.userData.flip.rotation.set(0, 0, 0);
+    restPose();
     hero.visible = true;
     ring.material.opacity = 0;
     pulseRing.visible = false; pulseT = 0;
@@ -615,6 +658,7 @@ export function startGame({ canvas, hud }){
       charge = Math.min(charge + gdt, CHARGE_MAX);
       const c = clamp(charge / CHARGE_MAX, 0, 1);
       hero.scale.set(1 + 0.18 * c, 1 - 0.34 * c, 1 + 0.18 * c);
+      poseCharge(c);
       ring.position.set(hero.position.x, 0.02, hero.position.z);
       ring.scale.setScalar(0.5 + 1.3 * c);
       ring.material.opacity = 0.35 + 0.55 * c;
@@ -630,10 +674,11 @@ export function startGame({ canvas, hud }){
       // lively forward somersault — eased so it tucks fast then lands upright
       const spin = easeInOutQuad(t);
       hero.userData.flip.rotation.x = -spin * Math.PI * 2;
+      poseFlight(t);     // arms + legs articulate the tuck-and-open through the flip
       // trace the ACTUAL flight path into a continuous gradient curve (not predictive)
       flightPath.push(new THREE.Vector3(0, hero.position.y + 0.4, hero.position.z));
       buildTrail();
-      if (t >= 1){ hero.scale.set(1, 1, 1); hero.userData.flip.rotation.set(0, 0, 0); judgeLanding(); }
+      if (t >= 1){ hero.scale.set(1, 1, 1); hero.userData.flip.rotation.set(0, 0, 0); restPose(); judgeLanding(); }
     } else if (state === FALLING){
       deadTimer += dt;   // hero is shattered into particles; just count down to the card
       if (deadTimer > 0.95) finalizeDeath();
@@ -641,6 +686,7 @@ export function startGame({ canvas, hud }){
       idleClock += gdt;
       const b = Math.sin(idleClock * 2.2) * 0.012;
       hero.scale.set(1, 1 + b, 1);
+      if (rig){ const sway = Math.sin(idleClock * 2.2) * 0.05; rig.armL.rotation.x = sway; rig.armR.rotation.x = sway; }
     }
 
     // expanding release pulse
