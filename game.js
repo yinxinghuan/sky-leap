@@ -10,6 +10,10 @@
 // sky-ruin assets are built.
 
 import * as THREE from 'three';
+import { EffectComposer } from 'three/addons/postprocessing/EffectComposer.js';
+import { RenderPass } from 'three/addons/postprocessing/RenderPass.js';
+import { UnrealBloomPass } from 'three/addons/postprocessing/UnrealBloomPass.js';
+import { OutputPass } from 'three/addons/postprocessing/OutputPass.js';
 import { hero as buildHero, platStone, platPillar, runeDisk, cloudField, bgRuins, STONE_TONES } from './builders/skyruins.js?v=7';
 
 // --- tunables ---------------------------------------------------------------
@@ -55,37 +59,87 @@ function jumpDist(c){ return MIN_DIST + (MAX_DIST - MIN_DIST) * easeInQuad(c); }
 function arcHeight(c){ return BASE_H + c * PEAK_H; }
 
 export function startGame({ canvas, hud }){
-  const renderer = new THREE.WebGLRenderer({ canvas, antialias: true, alpha: true });
-  renderer.setClearColor(0x000000, 0);
+  const renderer = new THREE.WebGLRenderer({ canvas, antialias: true });
   renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
   renderer.shadowMap.enabled = true;
   renderer.shadowMap.type = THREE.PCFSoftShadowMap;
   renderer.toneMapping = THREE.ACESFilmicToneMapping;
-  renderer.toneMappingExposure = 1.1;
+  renderer.toneMappingExposure = 1.18;
 
   const scene = new THREE.Scene();
-  scene.fog = new THREE.Fog(0xc78a86, 22, 52);   // warm-mauve horizon haze (harmonizes with ruins)
+  scene.fog = new THREE.Fog(0xe6a86a, 26, 70);   // warm golden haze
 
-  const camera = new THREE.PerspectiveCamera(55, 1, 0.1, 200);
+  const camera = new THREE.PerspectiveCamera(55, 1, 0.1, 400);
   const camLook = new THREE.Vector3();
 
-  scene.add(new THREE.HemisphereLight(0xfff0e0, 0x4a3a5a, 0.7));
-  const key = new THREE.DirectionalLight(0xfff4d6, 1.5);
-  key.position.set(6, 13, 4);
+  // ── Golden-hour gradient sky dome (amber horizon → violet zenith) ──
+  const sky = new THREE.Mesh(
+    new THREE.SphereGeometry(180, 24, 14),
+    new THREE.ShaderMaterial({
+      side: THREE.BackSide, depthWrite: false, fog: false,
+      uniforms: {
+        top: { value: new THREE.Color(0x2a1c46) },
+        mid: { value: new THREE.Color(0x9c4f78) },
+        bot: { value: new THREE.Color(0xf2b066) },
+      },
+      vertexShader: 'varying vec3 vP; void main(){ vP = position; gl_Position = projectionMatrix * modelViewMatrix * vec4(position,1.0); }',
+      fragmentShader: 'varying vec3 vP; uniform vec3 top; uniform vec3 mid; uniform vec3 bot; void main(){ float h = normalize(vP).y; vec3 c = h > 0.0 ? mix(mid, top, clamp(h*1.25,0.0,1.0)) : mix(mid, bot, clamp(-h*1.8,0.0,1.0)); gl_FragColor = vec4(c,1.0); }',
+    })
+  );
+  scene.add(sky);
+
+  // ── Sun on the horizon — bright, blooms into a golden flare ──
+  const sun = new THREE.Mesh(
+    new THREE.SphereGeometry(4.2, 24, 24),
+    new THREE.MeshBasicMaterial({ color: 0xffe8bc, fog: false })
+  );
+  scene.add(sun);
+
+  // ── Golden-hour lighting: low warm key (long shadows) + warm rim + cool fill ──
+  scene.add(new THREE.HemisphereLight(0xffe0c0, 0x3a2c4a, 0.55));
+  const key = new THREE.DirectionalLight(0xffd49a, 1.75);
+  key.position.set(-12, 8, 6);     // low + side → long dramatic shadows
   key.castShadow = true;
   key.shadow.mapSize.set(1024, 1024);
-  key.shadow.camera.near = 1; key.shadow.camera.far = 60;
-  key.shadow.camera.left = -14; key.shadow.camera.right = 14;
-  key.shadow.camera.top = 14; key.shadow.camera.bottom = -14;
+  key.shadow.camera.near = 1; key.shadow.camera.far = 80;
+  key.shadow.camera.left = -18; key.shadow.camera.right = 18;
+  key.shadow.camera.top = 18; key.shadow.camera.bottom = -18;
   key.shadow.bias = -0.0005;
   scene.add(key);
-  const fill = new THREE.DirectionalLight(0xbcd4ff, 0.35);
-  fill.position.set(-7, 5, -3);
+  const rim = new THREE.DirectionalLight(0xffcf8a, 0.6);
+  rim.position.set(6, 4, -12);     // warm back-rim for golden edges
+  scene.add(rim);
+  const fill = new THREE.DirectionalLight(0x9ab0e0, 0.22);
+  fill.position.set(9, 5, 3);      // cool low fill keeps shadows from going dead
   scene.add(fill);
+
+  // ── Floating dust motes — warm, additive, catch the light (golden-hour life) ──
+  const MOTES = 150;
+  const mGeo = new THREE.BufferGeometry();
+  const mPos = new Float32Array(MOTES * 3);
+  for (let i = 0; i < MOTES; i++){
+    mPos[i * 3] = (Math.random() * 2 - 1) * 15;
+    mPos[i * 3 + 1] = Math.random() * 11 - 1.5;
+    mPos[i * 3 + 2] = (Math.random() * 2 - 1) * 20;
+  }
+  mGeo.setAttribute('position', new THREE.BufferAttribute(mPos, 3));
+  const motes = new THREE.Points(mGeo, new THREE.PointsMaterial({
+    color: 0xffdca0, size: 0.09, transparent: true, opacity: 0.75,
+    blending: THREE.AdditiveBlending, depthWrite: false, sizeAttenuation: true, fog: false,
+  }));
+  scene.add(motes);
+
+  // ── Bloom post-processing — the core "lavish" lever (emissives + sun glow) ──
+  const composer = new EffectComposer(renderer);
+  composer.addPass(new RenderPass(scene, camera));
+  const bloom = new UnrealBloomPass(new THREE.Vector2(1, 1), 0.75, 0.6, 0.62);
+  composer.addPass(bloom);
+  composer.addPass(new OutputPass());
 
   function resize(){
     const w = window.innerWidth, h = window.innerHeight;
     renderer.setSize(w, h, false);
+    composer.setSize(w, h);
     camera.aspect = w / h;
     camera.updateProjectionMatrix();
   }
@@ -111,6 +165,154 @@ export function startGame({ canvas, hud }){
   ring.rotation.x = -Math.PI / 2;
   ring.position.y = 0.02;
   scene.add(ring);
+
+  // release pulse ring (expands outward on launch)
+  const pulseRing = new THREE.Mesh(
+    new THREE.RingGeometry(0.5, 0.66, 32),
+    new THREE.MeshBasicMaterial({ color: 0x9ff0e6, transparent: true, opacity: 0, side: THREE.DoubleSide })
+  );
+  pulseRing.rotation.x = -Math.PI / 2; pulseRing.position.y = 0.03; pulseRing.visible = false;
+  scene.add(pulseRing);
+  let pulseT = 0;
+
+  // ── particle pool (burst + soft puff + voxel shatter) ──
+  const PCOUNT = 150;
+  const pGeo = new THREE.BoxGeometry(1, 1, 1);
+  const pPool = [];
+  for (let i = 0; i < PCOUNT; i++){
+    const m = new THREE.Mesh(pGeo, new THREE.MeshStandardMaterial({ flatShading: true, transparent: true }));
+    m.visible = false; m.frustumCulled = false; m.castShadow = false; scene.add(m);
+    pPool.push({ m, vx: 0, vy: 0, vz: 0, life: 0, maxLife: 1, size: 0.1, grav: 9, soft: false, spin: 0 });
+  }
+  let pCur = 0;
+  function spawnP(x, y, z, color, o){
+    const p = pPool[pCur]; pCur = (pCur + 1) % PCOUNT;
+    const m = p.m; m.visible = true; m.position.set(x, y, z);
+    const s = o.size || 0.12; m.scale.set(s, s, s);
+    m.material.color.setHex(color);
+    if (o.emissive){ m.material.emissive.setHex(color); m.material.emissiveIntensity = o.emissive; }
+    else { m.material.emissive.setHex(0x000000); m.material.emissiveIntensity = 0; }
+    m.material.opacity = 1;
+    m.rotation.set(Math.random() * 3, Math.random() * 3, Math.random() * 3);
+    p.vx = o.vx || 0; p.vy = o.vy || 0; p.vz = o.vz || 0;
+    p.grav = o.grav != null ? o.grav : 9; p.soft = !!o.soft;
+    p.life = p.maxLife = o.life || 0.6; p.size = s; p.spin = o.spin || 0;
+  }
+  function burst(x, y, z, { count = 12, color = 0xf2c14e, speed = 3, up = 3, size = 0.13, life = 0.6, emissive = 0 } = {}){
+    for (let i = 0; i < count; i++){
+      const a = Math.random() * Math.PI * 2, r = Math.random();
+      spawnP(x, y, z, color, { vx: Math.cos(a) * speed * r, vy: up * (0.5 + Math.random()), vz: Math.sin(a) * speed * r,
+        size: size * (0.7 + Math.random() * 0.6), life: life * (0.7 + Math.random() * 0.6), grav: 9, emissive, spin: 6 });
+    }
+  }
+  function puffFx(x, y, z, { count = 4, color = 0xeee7d6, size = 0.2, life = 0.5 } = {}){
+    for (let i = 0; i < count; i++)
+      spawnP(x, y, z, color, { vx: (Math.random() * 2 - 1) * 0.6, vy: 0.4 + Math.random() * 0.4, vz: (Math.random() * 2 - 1) * 0.6,
+        size: size * (0.6 + Math.random() * 0.6), life, grav: 0.5, soft: true });
+  }
+  function updateParticles(dt){
+    for (const p of pPool){
+      if (!p.m.visible) continue;
+      p.life -= dt;
+      if (p.life <= 0){ p.m.visible = false; continue; }
+      const m = p.m;
+      m.position.x += p.vx * dt; m.position.y += p.vy * dt; m.position.z += p.vz * dt;
+      p.vy -= p.grav * dt;
+      const t = p.life / p.maxLife;
+      if (p.soft){ m.scale.setScalar(p.size * (1.4 - 0.6 * t)); m.material.opacity = t; }
+      else { m.scale.setScalar(p.size * Math.max(0.2, t)); m.material.opacity = Math.min(1, t * 1.6); }
+      m.rotation.x += p.spin * dt; m.rotation.y += p.spin * dt;
+    }
+  }
+  function shatterHero(){
+    hero.updateWorldMatrix(true, true);
+    const wp = new THREE.Vector3();
+    hero.traverse(o => {
+      if (!o.isMesh) return;
+      o.getWorldPosition(wp);
+      const col = (o.material && o.material.color) ? o.material.color.getHex() : 0xcccccc;
+      const em = (o.material && o.material.emissiveIntensity) ? 0.9 : 0;
+      for (let k = 0; k < 2; k++)
+        spawnP(wp.x, wp.y, wp.z, col, { vx: (Math.random() * 2 - 1) * 2.4, vy: 1.4 + Math.random() * 2.6, vz: (Math.random() * 2 - 1) * 2.4,
+          size: 0.15, life: 1.1, grav: 8, emissive: em, spin: 7 });
+    });
+    hero.visible = false;
+  }
+
+  // ── slow-mo + camera kick ──
+  let slow = 0, slowAmt = 1, timeScale = 1, camKick = 0;
+  function doSlow(amt, dur){ if (slow > 0) return; slow = dur; slowAmt = amt; }
+
+  // ── WebAudio kit (lazy; init on first touch only — preload-safe) ──
+  let AC = null, master = null, ambGain = null, chargeOsc = null, chargeGain = null;
+  function audioUnlock(){
+    if (AC){ if (AC.state !== 'running') AC.resume(); return; }
+    const ACtor = window.AudioContext || window.webkitAudioContext; if (!ACtor) return;
+    AC = new ACtor();
+    master = AC.createGain(); master.gain.value = 0.85;
+    const comp = AC.createDynamicsCompressor();
+    master.connect(comp); comp.connect(AC.destination);
+    startAmbient();
+  }
+  function tone(freq, dur, o = {}){
+    if (!AC) return;
+    const t0 = AC.currentTime + (o.delay || 0);
+    const osc = AC.createOscillator(); osc.type = o.type || 'sine'; osc.frequency.setValueAtTime(freq, t0);
+    if (o.slideTo) osc.frequency.exponentialRampToValueAtTime(o.slideTo, t0 + dur);
+    const g = AC.createGain(); g.gain.setValueAtTime(0.0001, t0);
+    g.gain.exponentialRampToValueAtTime(o.gain || 0.2, t0 + 0.012);
+    g.gain.exponentialRampToValueAtTime(0.0001, t0 + dur);
+    const lp = AC.createBiquadFilter(); lp.type = 'lowpass'; lp.frequency.value = o.lp || 3200;
+    osc.connect(g); g.connect(lp); lp.connect(master); osc.start(t0); osc.stop(t0 + dur + 0.03);
+  }
+  function noiseBurst(dur, o = {}){
+    if (!AC) return;
+    const t0 = AC.currentTime + (o.delay || 0);
+    const n = Math.max(1, Math.floor(AC.sampleRate * dur)); const buf = AC.createBuffer(1, n, AC.sampleRate);
+    const d = buf.getChannelData(0); for (let i = 0; i < n; i++) d[i] = (Math.random() * 2 - 1) * (1 - i / n);
+    const src = AC.createBufferSource(); src.buffer = buf;
+    const g = AC.createGain(); g.gain.value = o.gain || 0.15;
+    const f = AC.createBiquadFilter(); f.type = 'highpass'; f.frequency.value = o.hp || 500;
+    src.connect(f); f.connect(g); g.connect(master); src.start(t0);
+  }
+  function sfxChargeStart(){
+    if (!AC) return;
+    chargeOsc = AC.createOscillator(); chargeOsc.type = 'triangle'; chargeOsc.frequency.setValueAtTime(170, AC.currentTime);
+    chargeGain = AC.createGain(); chargeGain.gain.setValueAtTime(0.0001, AC.currentTime);
+    chargeGain.gain.exponentialRampToValueAtTime(0.11, AC.currentTime + 0.05);
+    const lp = AC.createBiquadFilter(); lp.type = 'lowpass'; lp.frequency.value = 1800;
+    chargeOsc.connect(chargeGain); chargeGain.connect(lp); lp.connect(master); chargeOsc.start();
+  }
+  function sfxChargeUpdate(c){ if (chargeOsc && AC) chargeOsc.frequency.setTargetAtTime(170 + c * 560, AC.currentTime, 0.05); }
+  function sfxChargeEnd(){
+    if (chargeGain && AC) chargeGain.gain.exponentialRampToValueAtTime(0.0001, AC.currentTime + 0.06);
+    if (chargeOsc && AC) chargeOsc.stop(AC.currentTime + 0.09);
+    chargeOsc = null; chargeGain = null;
+  }
+  function sfxWhoosh(){ noiseBurst(0.22, { gain: 0.16, hp: 520 }); tone(440, 0.18, { gain: 0.1, slideTo: 150 }); }
+  function sfxLand(){ tone(300, 0.12, { gain: 0.1, slideTo: 190 }); }
+  function sfxPerfect(combo){ const b = 540 + Math.min(combo, 8) * 36; tone(b, 0.15, { gain: 0.16 }); tone(b * 1.5, 0.22, { gain: 0.12, delay: 0.05 }); }
+  function sfxCrash(){ noiseBurst(0.5, { gain: 0.24, hp: 220 }); tone(150, 0.42, { type: 'sawtooth', gain: 0.1, slideTo: 60 }); }
+  function startAmbient(){
+    if (!AC) return;
+    ambGain = AC.createGain(); ambGain.gain.value = 0; ambGain.connect(master);
+    const o1 = AC.createOscillator(); o1.type = 'sine'; o1.frequency.value = 110;
+    const o2 = AC.createOscillator(); o2.type = 'sine'; o2.frequency.value = 146.8;
+    const lp = AC.createBiquadFilter(); lp.type = 'lowpass'; lp.frequency.value = 640;
+    o1.connect(lp); o2.connect(lp); lp.connect(ambGain); o1.start(); o2.start();
+    breathe();
+  }
+  function breathe(){
+    if (!AC || !ambGain) return;
+    const now = AC.currentTime;
+    const rise = 5 + Math.random() * 3, hold = 8 + Math.random() * 8, fall = 6 + Math.random() * 4, sil = 7 + Math.random() * 9, peak = 0.05;
+    ambGain.gain.cancelScheduledValues(now);
+    ambGain.gain.setValueAtTime(Math.max(0.0001, ambGain.gain.value), now);
+    ambGain.gain.linearRampToValueAtTime(peak, now + rise);
+    ambGain.gain.setValueAtTime(peak, now + rise + hold);
+    ambGain.gain.linearRampToValueAtTime(0.0001, now + rise + hold + fall);
+    setTimeout(breathe, (rise + hold + fall + sil) * 1000);
+  }
 
   // platform pool
   let plats = [];
@@ -194,7 +396,7 @@ export function startGame({ canvas, hud }){
   let current = null;
   let score = 0, combo = 0, best = readBest();
   let deadTimer = 0;
-  let launchT = 0, airTime = 0, startAlong = 0, dist = 0, apex = 0;
+  let launchT = 0, airTime = 0, startAlong = 0, dist = 0, apex = 0, trailT = 0;
 
   function readBest(){ try { return Number(localStorage.getItem('sl.best')) || 0; } catch(e){ return 0; } }
   function writeBest(v){ try { localStorage.setItem('sl.best', String(v)); } catch(e){} }
@@ -211,6 +413,8 @@ export function startGame({ canvas, hud }){
     hero.rotation.set(0, 0, 0);
     hero.visible = true;
     ring.material.opacity = 0;
+    pulseRing.visible = false; pulseT = 0;
+    slow = 0; timeScale = 1; camKick = 0;
     camera.position.set(0, CAM_UP, current.along - CAM_BACK);
     camLook.set(0, 0.5, current.along);
     camera.lookAt(camLook);
@@ -218,9 +422,11 @@ export function startGame({ canvas, hud }){
   }
 
   function chargeStart(){
+    audioUnlock();
     if (state !== IDLE) return;
     state = CHARGING;
     charge = 0;
+    sfxChargeStart();
   }
   function chargeRelease(){
     if (state !== CHARGING) return;
@@ -229,10 +435,14 @@ export function startGame({ canvas, hud }){
     apex = arcHeight(c);
     airTime = AIR_BASE + c * AIR_EXTRA;
     startAlong = current.along;
-    launchT = 0;
+    launchT = 0; trailT = 0;
     state = LAUNCH;
     ring.material.opacity = 0;
     hero.scale.set(1, 1, 1);
+    sfxChargeEnd(); sfxWhoosh();
+    // expanding release pulse on the launch platform
+    pulseRing.position.set(hero.position.x, 0.03, hero.position.z);
+    pulseRing.visible = true; pulseT = 0.5;
   }
 
   function judgeLanding(){
@@ -247,14 +457,35 @@ export function startGame({ canvas, hud }){
     }
     if (!landed){ die(); return; }
     current = landed;
-    score = landed.idx;
+    hero.position.set(0, PLAT_TOP, landAlong);
     const d = Math.abs(landAlong - landed.along);
-    if (d <= landed.half * 0.22){ combo += 1; flashPlatform(landed, true); }
-    else if (d <= landed.half * 0.70){ flashPlatform(landed, false); }
-    else { combo = 0; }
+    if (d <= landed.half * 0.22){
+      // PERFECT — gold burst + screen bounce + slow-mo + chime, combo escalates
+      combo += 1;
+      score += 3;   // 1 platform + 2 perfect bonus (monotonic)
+      flashPlatform(landed, true);
+      const n = 10 + Math.min(combo, 8) * 2;
+      burst(0, PLAT_TOP + 0.2, landAlong, { count: n, color: 0xf2c14e, speed: 3.2, up: 3.4, size: 0.15, life: 0.7, emissive: 1.2 });
+      burst(0, PLAT_TOP + 0.2, landAlong, { count: Math.floor(n * 0.5), color: 0x9ff0e6, speed: 2.4, up: 2.8, size: 0.12, life: 0.6, emissive: 1.0 });
+      camKick = 0.55;
+      doSlow(0.42, 0.18);
+      sfxPerfect(combo);
+      hud.pop(combo >= 2 ? 'PERFECT ×' + combo : 'PERFECT');
+    } else if (d <= landed.half * 0.70){
+      // GOOD — keep combo, soft dust
+      score += 1;
+      flashPlatform(landed, false);
+      puffFx(0, PLAT_TOP, landAlong, { count: 4 });
+      sfxLand();
+    } else {
+      // plain landing — combo resets
+      combo = 0;
+      score += 1;
+      puffFx(0, PLAT_TOP, landAlong, { count: 5 });
+      sfxLand();
+    }
     hud.setScore(score);
     hud.setCombo(combo);
-    hero.position.set(0, PLAT_TOP, landAlong);
     state = IDLE;
     ensureAhead();
     recycleBehind();
@@ -270,6 +501,9 @@ export function startGame({ canvas, hud }){
     deadTimer = 0;
     combo = 0;
     hud.setCombo(0);
+    shatterHero();          // burst the hero into its own voxels
+    sfxCrash();
+    doSlow(0.35, 0.45);
   }
 
   function finalizeDeath(){
@@ -284,7 +518,7 @@ export function startGame({ canvas, hud }){
   function updateCamera(dt){
     if (state === DEAD) return;
     const tz = hero.position.z - CAM_BACK;
-    let ty = CAM_UP;
+    let ty = CAM_UP + camKick;
     if (state === LAUNCH){
       const t = clamp(launchT / airTime, 0, 1);
       ty += 0.8 * apex * Math.sin(Math.PI * t) * 0.25;
@@ -310,42 +544,76 @@ export function startGame({ canvas, hud }){
     let dt = (now - last) / 1000; last = now;
     if (dt > 0.05) dt = 0.05;
 
-    // cloud sea + distant ruins trail the hero so the backdrop is always present
-    clouds.position.z = hero.position.z;
-    bgr.position.z = hero.position.z;
+    // slow-mo: scale the dt that drives gameplay tweens/particles/camera, but
+    // keep RAF + backdrop on real time so the loop never stalls.
+    if (slow > 0){ slow -= dt; timeScale = slow > 0 ? slowAmt : 1; } else timeScale = 1;
+    const gdt = dt * timeScale;
+    camKick = lerp(camKick, 0, 9 * dt);
+
+    // backdrop trails the hero so it's always present
+    const hz = hero.position.z;
+    clouds.position.z = hz;
+    bgr.position.z = hz;
+    sky.position.set(camera.position.x, camera.position.y, camera.position.z);
+    sun.position.set(-26, 10, hz + 60);   // golden sun on the left horizon ahead
     for (const c of clouds.children){
       c.position.y = c.userData.baseY + Math.sin(now / 1000 * 0.5 + c.userData.bob) * 0.12;
     }
+    // dust motes: drift up + slow sideways, wrap within a box around the hero
+    motes.position.z = hz;
+    const mp = motes.geometry.attributes.position;
+    for (let i = 0; i < mp.count; i++){
+      let y = mp.getY(i) + dt * 0.35;
+      if (y > 9.5) y = -1.5;
+      mp.setY(i, y);
+      mp.setX(i, mp.getX(i) + Math.sin(now / 1000 * 0.3 + i) * dt * 0.12);
+    }
+    mp.needsUpdate = true;
 
     if (state === CHARGING){
-      charge = Math.min(charge + dt, CHARGE_MAX);
+      charge = Math.min(charge + gdt, CHARGE_MAX);
       const c = clamp(charge / CHARGE_MAX, 0, 1);
       hero.scale.set(1 + 0.18 * c, 1 - 0.34 * c, 1 + 0.18 * c);
       ring.position.set(hero.position.x, 0.02, hero.position.z);
       ring.scale.setScalar(0.5 + 1.3 * c);
-      ring.material.opacity = 0.25 + 0.5 * c;
+      ring.material.opacity = 0.35 + 0.55 * c;
+      sfxChargeUpdate(c);
     } else if (state === LAUNCH){
-      launchT += dt;
+      launchT += gdt;
       const t = clamp(launchT / airTime, 0, 1);
       hero.position.z = startAlong + dist * t;
       hero.position.y = PLAT_TOP + 4 * apex * t * (1 - t);
       const stretch = 1 + 0.22 * Math.sin(Math.PI * t) * (1 - 0.5 * t);
       hero.scale.set(1 / Math.sqrt(stretch), stretch, 1 / Math.sqrt(stretch));
+      // teal arc trail
+      trailT += gdt;
+      if (trailT > 0.04){
+        trailT = 0;
+        spawnP(hero.position.x, hero.position.y, hero.position.z, 0x9ff0e6,
+          { vx: 0, vy: 0.1, vz: 0, size: 0.13, life: 0.4, grav: 0.3, soft: true, emissive: 0.6 });
+      }
       if (t >= 1){ hero.scale.set(1, 1, 1); judgeLanding(); }
     } else if (state === FALLING){
-      deadTimer += dt;
-      hero.position.y -= (3 + deadTimer * 9) * dt;
-      hero.position.z += dist * 0.15 * dt;
-      hero.rotation.x += dt * 3;
-      if (deadTimer > 0.85) finalizeDeath();
+      deadTimer += dt;   // hero is shattered into particles; just count down to the card
+      if (deadTimer > 0.95) finalizeDeath();
     } else if (state === IDLE){
-      idleClock += dt;
+      idleClock += gdt;
       const b = Math.sin(idleClock * 2.2) * 0.012;
       hero.scale.set(1, 1 + b, 1);
     }
 
-    updateCamera(dt);
-    renderer.render(scene, camera);
+    // expanding release pulse
+    if (pulseT > 0){
+      pulseT -= dt;
+      const k = 1 - pulseT / 0.5;
+      pulseRing.scale.setScalar(0.6 + k * 2.4);
+      pulseRing.material.opacity = (1 - k) * 0.7;
+      if (pulseT <= 0) pulseRing.visible = false;
+    }
+
+    updateParticles(gdt);
+    updateCamera(gdt);
+    composer.render();
   }
 
   reset();

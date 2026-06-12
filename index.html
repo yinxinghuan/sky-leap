@@ -62,6 +62,21 @@
   #combo.show { opacity:1; }
   #combo.pop { transform:translateX(-50%) scale(1.25); }
 
+  /* Floating PERFECT / combo pop */
+  #pop {
+    top:38%; left:50%; transform:translate(-50%,-50%);
+    font-family:var(--serif); font-weight:700; color:var(--gold);
+    font-size:30px; letter-spacing:.1em; white-space:nowrap; text-align:center;
+    text-shadow:0 0 18px rgba(242,193,78,.7), 0 2px 8px rgba(0,0,0,.5);
+    opacity:0;
+  }
+  #pop.go { animation:sl-pop .7s ease-out; }
+  @keyframes sl-pop {
+    0%   { opacity:0; transform:translate(-50%,-50%) scale(.6); }
+    25%  { opacity:1; transform:translate(-50%,-62%) scale(1.1); }
+    100% { opacity:0; transform:translate(-50%,-92%) scale(1); }
+  }
+
   /* Hold hint — bottom, title + idle state */
   #hint {
     bottom:calc(15% + env(safe-area-inset-bottom)); left:50%; transform:translateX(-50%);
@@ -197,6 +212,7 @@
   <div id="wordmark" class="hud">SKY LEAP<span class="sub">RUINS OF THE SKY</span></div>
   <div id="score" class="hud">0</div>
   <div id="combo" class="hud"></div>
+  <div id="pop" class="hud"></div>
   <div id="hint" class="hud">HOLD TO CHARGE &middot; RELEASE TO LEAP</div>
   <div id="lb"></div>
 </div>
@@ -228,13 +244,14 @@
 </script>
 
 <script type="module">
-import { startGame } from './game.js?v=9';
+import { startGame } from './game.js?v=11';
 
 const $ = (s) => document.querySelector(s);
 const canvas = $('#c');
 const wordmarkEl = $('#wordmark');
 const scoreEl = $('#score');
 const comboEl = $('#combo');
+const popEl = $('#pop');
 const hintEl = $('#hint');
 const overEl = $('#over');
 
@@ -279,6 +296,12 @@ const hud = {
   },
   setReady(on){
     hintEl.classList.toggle('show', on !== false);
+  },
+  pop(text){
+    popEl.textContent = text;
+    popEl.classList.remove('go');
+    void popEl.offsetWidth;   // restart the animation
+    popEl.classList.add('go');
   },
 };
 
