@@ -175,6 +175,51 @@ export function startGame({ canvas, hud }){
   scene.add(pulseRing);
   let pulseT = 0;
 
+  // ── predictive trajectory arc — a continuous gradient tube from the hero to
+  // the predicted landing, shown while charging + through the flight, so the
+  // player can read the curve and judge whether their charge was right. ──
+  const aimMat = new THREE.ShaderMaterial({
+    transparent: true, depthWrite: false, fog: false,
+    uniforms: {
+      uOpacity: { value: 1 },
+      cA: { value: new THREE.Color(0x3fb6ac) },   // teal at the hero
+      cB: { value: new THREE.Color(0xf2c14e) },   // gold toward the landing
+    },
+    vertexShader: 'varying vec2 vUv; void main(){ vUv = uv; gl_Position = projectionMatrix * modelViewMatrix * vec4(position,1.0); }',
+    fragmentShader: 'varying vec2 vUv; uniform float uOpacity; uniform vec3 cA; uniform vec3 cB; void main(){ vec3 c = mix(cA, cB, vUv.x); float a = (0.45 + 0.55 * vUv.x) * uOpacity; gl_FragColor = vec4(c, a); }',
+  });
+  const aimArc = new THREE.Mesh(new THREE.BufferGeometry(), aimMat);
+  aimArc.visible = false; aimArc.frustumCulled = false;
+  scene.add(aimArc);
+  const aimMarker = new THREE.Mesh(
+    new THREE.RingGeometry(0.26, 0.4, 24),
+    new THREE.MeshBasicMaterial({ color: 0xf2c14e, transparent: true, opacity: 0, side: THREE.DoubleSide })
+  );
+  aimMarker.rotation.x = -Math.PI / 2; aimMarker.visible = false;
+  scene.add(aimMarker);
+  let arcFade = 0;
+  const _aimPts = [];
+  function buildAimArc(c){
+    const d = jumpDist(c), ap = arcHeight(c), z0 = current.along;
+    const N = 18;
+    // Flatten the GUIDE apex (~40% of the real one): under the trailing top-down
+    // camera the forward distance foreshortens, so the true tall arc reads as a
+    // vertical spike. A low forward curve to the true landing point is what lets
+    // the player read "how far this charge sends me".
+    const visApex = ap * 0.4;
+    _aimPts.length = 0;
+    for (let i = 0; i <= N; i++){
+      const t = i / N;
+      const base = 0.45 + (0.05 - 0.45) * t;   // start at hero center, end on the pad surface
+      _aimPts.push(new THREE.Vector3(0, PLAT_TOP + base + 4 * visApex * t * (1 - t), z0 + d * t));
+    }
+    const curve = new THREE.CatmullRomCurve3(_aimPts);
+    aimArc.geometry.dispose();
+    aimArc.geometry = new THREE.TubeGeometry(curve, N, 0.05, 6, false);
+    aimMarker.position.set(0, PLAT_TOP + 0.04, z0 + d);
+  }
+  function showAim(on){ aimArc.visible = on; aimMarker.visible = on; if (on){ aimMat.uniforms.uOpacity.value = 1; arcFade = 0; } }
+
   // ── particle pool (burst + soft puff + voxel shatter) ──
   const PCOUNT = 150;
   const pGeo = new THREE.BoxGeometry(1, 1, 1);
@@ -414,6 +459,7 @@ export function startGame({ canvas, hud }){
     hero.visible = true;
     ring.material.opacity = 0;
     pulseRing.visible = false; pulseT = 0;
+    showAim(false); arcFade = 0;
     slow = 0; timeScale = 1; camKick = 0;
     camera.position.set(0, CAM_UP, current.along - CAM_BACK);
     camLook.set(0, 0.5, current.along);
@@ -439,6 +485,8 @@ export function startGame({ canvas, hud }){
     state = LAUNCH;
     ring.material.opacity = 0;
     hero.scale.set(1, 1, 1);
+    buildAimArc(c);          // freeze the arc at the released charge (it now == the flight path)
+    showAim(true);
     sfxChargeEnd(); sfxWhoosh();
     // expanding release pulse on the launch platform
     pulseRing.position.set(hero.position.x, 0.03, hero.position.z);
@@ -487,6 +535,7 @@ export function startGame({ canvas, hud }){
     hud.setScore(score);
     hud.setCombo(combo);
     state = IDLE;
+    arcFade = 0.32;          // fade the arc out so the player still sees the curve they took
     ensureAhead();
     recycleBehind();
   }
@@ -501,6 +550,7 @@ export function startGame({ canvas, hud }){
     deadTimer = 0;
     combo = 0;
     hud.setCombo(0);
+    showAim(false);         // arc led into the void — drop it
     shatterHero();          // burst the hero into its own voxels
     sfxCrash();
     doSlow(0.35, 0.45);
@@ -577,6 +627,10 @@ export function startGame({ canvas, hud }){
       ring.position.set(hero.position.x, 0.02, hero.position.z);
       ring.scale.setScalar(0.5 + 1.3 * c);
       ring.material.opacity = 0.35 + 0.55 * c;
+      // live predicted trajectory + landing marker (the strategy read)
+      buildAimArc(c);
+      showAim(true);
+      aimMarker.material.opacity = 0.55 + 0.35 * Math.sin(now / 110);
       sfxChargeUpdate(c);
     } else if (state === LAUNCH){
       launchT += gdt;
@@ -585,13 +639,7 @@ export function startGame({ canvas, hud }){
       hero.position.y = PLAT_TOP + 4 * apex * t * (1 - t);
       const stretch = 1 + 0.22 * Math.sin(Math.PI * t) * (1 - 0.5 * t);
       hero.scale.set(1 / Math.sqrt(stretch), stretch, 1 / Math.sqrt(stretch));
-      // teal arc trail
-      trailT += gdt;
-      if (trailT > 0.04){
-        trailT = 0;
-        spawnP(hero.position.x, hero.position.y, hero.position.z, 0x9ff0e6,
-          { vx: 0, vy: 0.1, vz: 0, size: 0.13, life: 0.4, grav: 0.3, soft: true, emissive: 0.6 });
-      }
+      // the arc stays drawn (frozen at the released charge) — the path being flown
       if (t >= 1){ hero.scale.set(1, 1, 1); judgeLanding(); }
     } else if (state === FALLING){
       deadTimer += dt;   // hero is shattered into particles; just count down to the card
@@ -609,6 +657,15 @@ export function startGame({ canvas, hud }){
       pulseRing.scale.setScalar(0.6 + k * 2.4);
       pulseRing.material.opacity = (1 - k) * 0.7;
       if (pulseT <= 0) pulseRing.visible = false;
+    }
+
+    // trajectory arc fade-out after landing (player still sees the curve flown)
+    if (arcFade > 0 && state !== CHARGING && state !== LAUNCH){
+      arcFade -= dt;
+      const o = clamp(arcFade / 0.32, 0, 1);
+      aimMat.uniforms.uOpacity.value = o;
+      aimMarker.material.opacity = o * 0.7;
+      if (arcFade <= 0) showAim(false);
     }
 
     updateParticles(gdt);
