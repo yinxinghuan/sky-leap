@@ -14,7 +14,7 @@ import { EffectComposer } from 'three/addons/postprocessing/EffectComposer.js';
 import { RenderPass } from 'three/addons/postprocessing/RenderPass.js';
 import { UnrealBloomPass } from 'three/addons/postprocessing/UnrealBloomPass.js';
 import { OutputPass } from 'three/addons/postprocessing/OutputPass.js';
-import { hero as buildHero, platStone, platPillar, runeDisk, bgSkyline, STONE_TONES } from './builders/skyruins.js?v=24';
+import { hero as buildHero, platStone, platPillar, runeDisk, bgPillars, STONE_TONES } from './builders/skyruins.js?v=26';
 
 // --- tunables ---------------------------------------------------------------
 const CHARGE_MAX = 1.05;          // seconds to full charge
@@ -68,7 +68,7 @@ export function startGame({ canvas, hud }){
   renderer.toneMappingExposure = 1.0;
 
   const scene = new THREE.Scene();
-  scene.fog = new THREE.Fog(0x8ccabf, 38, 86);   // fog color ≈ sky teal so distance truly dissolves into the sky
+  scene.fog = new THREE.Fog(0x8ccabf, 36, 72);   // fog ≈ sky teal; tighter so far skyline dissolves
 
   // Orthographic 45° oblique (axonometric) — parallel lines, no vanishing point,
   // low elevation so the tall pillar front faces read (matches the reference).
@@ -148,14 +148,25 @@ export function startGame({ canvas, hud }){
   const hero = buildHero();
   scene.add(hero);
 
-  // distant skyline — a flat billboard kept far in front of the camera each frame
-  const bg = bgSkyline();
+  // distant skyline — small/long 3D pillars in the WORLD (real parallax), laid
+  // out beside the rail and recycled past the hero. Far ones are fog-faded; new
+  // ones recycle in deep behind the fog so there's no visible pop-in.
+  const bg = bgPillars(14);
   scene.add(bg);
-  const _bgDir = new THREE.Vector3();
-  function placeSkyline(){
-    _bgDir.copy(camFocus).sub(camera.position).normalize();
-    bg.position.copy(camera.position).addScaledVector(_bgDir, 72);   // far back → fogged
-    bg.quaternion.copy(camera.quaternion);                          // face the camera
+  const bgItems = bg.children;
+  const BG_STEP = 5, BG_SPAN = bgItems.length * BG_STEP;
+  function layoutBg(baseZ){
+    for (let i = 0; i < bgItems.length; i++){
+      const m = bgItems[i];
+      // FAR (z+20..) so heavy fog fades them; LOW tops (y ≈ 0) so the ortho
+      // z-recession lifts them to the horizon instead of off the top of frame.
+      m.position.set((i % 2 ? 1 : -1) * (8 + (i * 7 % 16)), -1 + (i * 7 % 4) * 0.6, baseZ + 20 + i * BG_STEP);
+    }
+  }
+  function recycleBg(){
+    for (const m of bgItems){
+      if (m.position.z < hero.position.z - 6) m.position.z += BG_SPAN;   // scroll past → recycle deep ahead
+    }
   }
 
   // charge ring (ground, grows with charge)
@@ -450,6 +461,7 @@ export function startGame({ canvas, hud }){
     camFocus.set(-1, 0.6, current.along);
     camera.position.set(camFocus.x + ISO_DIR.x * ISO_DIST, camFocus.y + ISO_DIR.y * ISO_DIST, camFocus.z + ISO_DIR.z * ISO_DIST);
     camera.lookAt(camFocus);
+    layoutBg(current.along);
     hud.setScore(0); hud.setCombo(0); hud.setReady(true); hud.setDead(null);
   }
 
@@ -642,7 +654,7 @@ export function startGame({ canvas, hud }){
 
     updateParticles(gdt);
     updateCamera(gdt);
-    placeSkyline();
+    recycleBg();
     composer.render();
   }
 

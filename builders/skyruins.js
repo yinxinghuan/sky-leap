@@ -111,24 +111,18 @@ export function runeDisk(half, w){
   return g;
 }
 
-// ── Distant skyline — a FLAT backdrop "billboard" the game keeps in front of
-// the camera (far away + fogged). A row of faint teal building silhouettes with
-// uneven tops; long bodies run off the bottom / fade into the haze, so only the
-// tops read near the horizon (no floating, no ortho pop-in). ──
-const SKYLINE_MAT = new THREE.MeshBasicMaterial({ color: 0x88c3b7, fog: true });
-export function bgSkyline(){
+// ── Distant skyline — small, LONG, faint 3D pillars living in the WORLD (so
+// they parallax as the hero advances — not a glued billboard). Small size fakes
+// "far" (ortho has no perspective shrink); the long bodies sink deep into the
+// fog so the bottoms dissolve and nothing floats. game.js lays them out +
+// recycles them past the hero. ──
+export function bgPillars(n = 14){
   const g = new THREE.Group();
-  const tops = [5, 8, 3.5, 7, 4.5, 9, 5.5, 6.5, 4, 7.5, 3, 8.5, 5, 6, 4.5, 7];
-  const H = 26;                 // tall — bodies run far down, off-screen / fogged
-  let x = -36;
-  for (let i = 0; i < tops.length; i++){
-    const w = 2.0 + (i * 37 % 16) / 10;          // deterministic width variety
-    const top = tops[i];
-    const m = new THREE.Mesh(new THREE.BoxGeometry(w, H, 0.3), SKYLINE_MAT);
-    m.position.set(x + w / 2, top - H / 2, 0);    // top edge at local y = `top`
-    m.castShadow = false; m.receiveShadow = false; m.frustumCulled = false;
+  for (let i = 0; i < n; i++){
+    const w = 0.5 + (i * 29 % 5) / 10;                       // thin (0.5–0.9)
+    const m = gradPillarMesh(w, w, 0x8cc6ba, 26, 0xaad1c5);  // long, very faint → fog fades it into the sky
+    m.castShadow = false; m.receiveShadow = false;
     g.add(m);
-    x += w + 0.3 + (i * 53 % 7) / 10;             // small varied gaps
   }
   return g;
 }
