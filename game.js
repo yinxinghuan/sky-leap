@@ -70,7 +70,7 @@ export function startGame({ canvas, hud }){
   renderer.toneMappingExposure = 1.0;
 
   const scene = new THREE.Scene();
-  scene.fog = new THREE.Fog(0x9cc2e6, 36, 74);   // bluer sky-haze (was too cyan); matches sky mid
+  scene.fog = new THREE.Fog(0x9cc2e6, 32, 50);   // thicker haze: pillar bottoms (farthest from the high cam) dissolve into the cloud sea
 
   // Orthographic 45° oblique (axonometric) — parallel lines, no vanishing point,
   // low elevation so the tall pillar front faces read (matches the reference).
@@ -596,12 +596,12 @@ export function startGame({ canvas, hud }){
     if (!landed){ die(); return; }
     current = landed;
     const eh = Math.max(0.12, landed.half - HERO_HALF);   // effective landing half
-    // Rest the hero ON the pad. Within tolerance it stands where it actually
-    // landed; a forced warm-up assist (landAlong off the pad) snaps to centre so
-    // the hero is never left standing in mid-air.
-    const onPad = Math.abs(landAlong - landed.along) <= eh;
-    hero.position.set(0, PLAT_TOP, onPad ? landAlong : landed.along);
+    // Always rest the hero dead-centre on the pad it reached, so where it lands
+    // matches where it visually should (an off-centre rest reads as "hanging off
+    // the edge" under the 45° ortho view). Scoring below still uses the true jump
+    // offset `d`, so accuracy is rewarded even though the rest pose is centred.
     const d = Math.abs(landAlong - landed.along);
+    hero.position.set(0, PLAT_TOP, landed.along);
     if (d <= eh * 0.3){
       // PERFECT — gold burst + screen bounce + slow-mo + chime, combo escalates
       combo += 1;
@@ -720,7 +720,7 @@ export function startGame({ canvas, hud }){
       hero.scale.set(1 / Math.sqrt(stretch), stretch, 1 / Math.sqrt(stretch));
       // lively forward somersault — eased so it tucks fast then lands upright
       const spin = easeInOutQuad(t);
-      hero.userData.flip.rotation.x = -spin * Math.PI * 2;
+      hero.userData.flip.rotation.x = spin * Math.PI * 2;   // FORWARD roll (toward +z travel dir), not a backflip
       poseFlight(t);     // arms + legs articulate the tuck-and-open through the flip
       // trace the ACTUAL flight path into a continuous gradient curve (not predictive)
       flightPath.push(new THREE.Vector3(0, hero.position.y + 0.4, hero.position.z));
