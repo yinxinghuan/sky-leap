@@ -1,0 +1,385 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta name="game-uuid" content="eefd9179-7b36-4440-8b73-0cb1ea4e153e" />
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover" />
+<title>Sky Leap</title>
+<script src="./aigram-bridge.js"></script>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@500;600;700&display=swap" rel="stylesheet" />
+<style>
+  :root {
+    --ink:#120e1a; --cream:#f3ead4; --cream-dim:#c8bfa9;
+    --teal:#3fb6ac; --gold:#f2c14e; --stone:#9aa1a8;
+    --serif:"Cinzel","PingFang SC",serif;
+  }
+  html, body {
+    margin:0; height:100%; overflow:hidden;
+    background:linear-gradient(#2a2140 0%, #5b4a72 45%, #b9728a 75%, #e0925b 100%);
+    font-family:-apple-system,"PingFang SC",BlinkMacSystemFont,"Segoe UI",sans-serif;
+    -webkit-user-select:none; user-select:none; -webkit-touch-callout:none;
+    -webkit-tap-highlight-color:transparent;
+  }
+  #wrap { position:fixed; inset:0; overflow:hidden; }
+  #c { display:block; width:100%; height:100%; touch-action:none; }
+
+  .hud { position:fixed; pointer-events:none; z-index:5; }
+
+  /* Wordmark — title state only, fades out on first leap */
+  #wordmark {
+    top:max(20px,env(safe-area-inset-top)); left:50%; transform:translateX(-50%);
+    font-family:var(--serif); font-weight:700; color:var(--cream);
+    font-size:30px; letter-spacing:.22em; text-align:center;
+    text-shadow:0 2px 12px rgba(0,0,0,.55), 0 0 22px rgba(63,182,172,.25);
+    transition:opacity .35s, transform .35s;
+  }
+  #wordmark .sub {
+    display:block; font-size:11px; font-weight:500; letter-spacing:.4em;
+    color:var(--teal); margin-top:5px; opacity:.85;
+  }
+  #wordmark.hidden { opacity:0; transform:translate(-50%, -16px); }
+
+  /* Score — platforms cleared, centered top */
+  #score {
+    top:max(22px,env(safe-area-inset-top)); left:50%; transform:translateX(-50%);
+    font-family:var(--serif); font-weight:700; color:var(--cream);
+    font-size:46px; line-height:1; font-variant-numeric:tabular-nums;
+    text-shadow:0 2px 10px rgba(0,0,0,.6);
+    opacity:0; transition:opacity .25s;
+  }
+  #score.show { opacity:1; }
+
+  /* Combo — appears under score when >= 2 */
+  #combo {
+    top:calc(max(22px,env(safe-area-inset-top)) + 54px); left:50%; transform:translateX(-50%);
+    font-family:var(--serif); font-weight:600; color:var(--gold);
+    font-size:18px; letter-spacing:.12em; line-height:1;
+    text-shadow:0 0 14px rgba(242,193,78,.5);
+    opacity:0; transition:opacity .2s, transform .2s;
+  }
+  #combo.show { opacity:1; }
+  #combo.pop { transform:translateX(-50%) scale(1.25); }
+
+  /* Hold hint — bottom, title + idle state */
+  #hint {
+    bottom:calc(15% + env(safe-area-inset-bottom)); left:50%; transform:translateX(-50%);
+    font-family:var(--serif); font-weight:500; color:var(--cream);
+    font-size:15px; letter-spacing:.16em; text-align:center; white-space:nowrap;
+    text-shadow:0 1px 8px rgba(0,0,0,.7);
+    opacity:0; transition:opacity .35s;
+    animation:sl-hint-pulse 1.9s ease-in-out infinite;
+  }
+  #hint.show { opacity:.9; }
+  @keyframes sl-hint-pulse { 0%,100%{opacity:.45;} 50%{opacity:.95;} }
+
+  /* Game over card */
+  #over {
+    position:fixed; inset:0; display:none;
+    align-items:center; justify-content:center;
+    background:rgba(18,14,26,.62); z-index:30; padding:24px;
+    pointer-events:auto;
+  }
+  #over.show { display:flex; }
+  #over .card {
+    box-sizing:border-box; text-align:center; max-width:320px; width:100%;
+    display:flex; flex-direction:column; align-items:center; gap:6px;
+  }
+  #over h1 {
+    font-family:var(--serif); font-weight:700; font-size:30px; color:var(--cream);
+    letter-spacing:.14em; margin:0 0 4px;
+    text-shadow:0 0 18px rgba(63,182,172,.3);
+  }
+  #over .rows {
+    display:flex; gap:34px; justify-content:center; margin:6px 0 4px;
+  }
+  #over .stat { display:flex; flex-direction:column; align-items:center; gap:3px; }
+  #over .stat .k {
+    font-family:var(--serif); font-size:11px; letter-spacing:.28em;
+    color:var(--cream-dim); text-transform:uppercase;
+  }
+  #over .stat .v {
+    font-family:var(--serif); font-weight:700; font-size:38px; color:var(--cream);
+    font-variant-numeric:tabular-nums; line-height:1;
+  }
+  #over .stat.best .v { color:var(--gold); }
+  #over .again {
+    margin-top:16px; pointer-events:auto;
+    padding:13px 36px; border:1px solid var(--teal); border-radius:999px;
+    background:var(--teal); color:var(--ink);
+    font-family:var(--serif); font-weight:700; font-size:15px; letter-spacing:.22em;
+    cursor:pointer; -webkit-tap-highlight-color:transparent;
+    box-shadow:0 0 24px rgba(63,182,172,.3);
+  }
+  #over .again:active { transform:translateY(1px); }
+
+  /* Always-visible champion pill — tap to open the full leaderboard */
+  #lb {
+    position:fixed; top:max(18px,env(safe-area-inset-top)); right:14px; z-index:6; pointer-events:auto;
+    display:none;
+  }
+  #lb.show { display:block; }
+  .lbrow {
+    display:flex; align-items:center; gap:6px;
+    background:rgba(243,234,212,.14); border:1px solid rgba(243,234,212,.3);
+    backdrop-filter:blur(6px);
+    border-radius:999px; padding:3px 11px 3px 4px;
+    font-family:var(--serif); font-size:13px; color:var(--cream); line-height:1;
+    cursor:pointer; -webkit-tap-highlight-color:transparent;
+  }
+  .lbrow .crown { width:15px; height:15px; flex:0 0 auto; display:block; }
+  .lbrow .crown path { fill:var(--gold); stroke:var(--ink); stroke-width:1.4; stroke-linejoin:round; }
+  .lbrow .av, .lbrow .avf {
+    width:22px; height:22px; border-radius:50%; border:1.5px solid rgba(243,234,212,.5);
+    flex:0 0 auto; display:block; object-fit:cover;
+  }
+  .lbrow .avf {
+    background:var(--teal); color:#fff;
+    display:flex; align-items:center; justify-content:center; font-size:11px;
+  }
+  .lbrow .nm { max-width:62px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+  .lbrow .sc { font-variant-numeric:tabular-nums; color:var(--gold); }
+  .lbrow.me .nm { color:var(--teal); }
+
+  /* Full leaderboard overlay */
+  #lbFull {
+    position:fixed; inset:0; display:none; z-index:40; padding:20px;
+    align-items:center; justify-content:center;
+    background:rgba(18,14,26,.7); pointer-events:auto;
+  }
+  #lbFull.show { display:flex; }
+  #lbFull .lcard {
+    background:#241d33; border:1px solid rgba(243,234,212,.2);
+    border-radius:14px; width:100%; max-width:380px; max-height:84vh;
+    display:flex; flex-direction:column; padding:20px 16px 16px;
+    box-shadow:0 20px 60px rgba(0,0,0,.5);
+  }
+  #lbFull h2 {
+    font-family:var(--serif); font-weight:700; font-size:24px; color:var(--cream);
+    margin:0 0 12px; text-align:center; letter-spacing:.14em;
+  }
+  #lblist {
+    display:flex; flex-direction:column; gap:7px;
+    overflow-y:auto; -webkit-overflow-scrolling:touch; padding:2px;
+  }
+  .lfrow {
+    display:flex; align-items:center; gap:9px;
+    border:1px solid rgba(243,234,212,.16); border-radius:10px; background:rgba(243,234,212,.05);
+    padding:8px 12px 8px 9px; cursor:pointer;
+    font-family:var(--serif); font-size:16px; color:var(--cream); line-height:1;
+    -webkit-tap-highlight-color:transparent;
+  }
+  .lfrow .rk { font-size:13px; min-width:26px; text-align:center; color:var(--cream-dim); }
+  .lfrow .av, .lfrow .avf {
+    width:30px; height:30px; border-radius:50%; border:1.5px solid rgba(243,234,212,.4);
+    flex:0 0 auto; display:block; object-fit:cover;
+  }
+  .lfrow .avf {
+    background:var(--teal); color:#fff;
+    display:flex; align-items:center; justify-content:center; font-size:15px;
+  }
+  .lfrow .nm { flex:1; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+  .lfrow .sc { font-variant-numeric:tabular-nums; color:var(--gold); }
+  .lfrow.me { background:rgba(63,182,172,.12); }
+  .lfrow.me .nm { color:var(--teal); }
+  #lbClose {
+    margin-top:14px; align-self:center; padding:9px 28px; border:1px solid var(--teal);
+    background:transparent; color:var(--teal); font-family:var(--serif); font-weight:600; font-size:15px;
+    letter-spacing:.16em; border-radius:999px; cursor:pointer;
+    -webkit-tap-highlight-color:transparent;
+  }
+</style>
+</head>
+<body>
+<div id="wrap">
+  <canvas id="c"></canvas>
+  <div id="wordmark" class="hud">SKY LEAP<span class="sub">RUINS OF THE SKY</span></div>
+  <div id="score" class="hud">0</div>
+  <div id="combo" class="hud"></div>
+  <div id="hint" class="hud">HOLD TO CHARGE &middot; RELEASE TO LEAP</div>
+  <div id="lb"></div>
+</div>
+
+<div id="lbFull">
+  <div class="lcard">
+    <h2>SKY PILGRIMS</h2>
+    <div id="lblist"></div>
+    <button id="lbClose">CLOSE</button>
+  </div>
+</div>
+
+<div id="over">
+  <div class="card">
+    <h1>FELL INTO THE CLOUDS</h1>
+    <div class="rows">
+      <div class="stat"><span class="k">Reached</span><span class="v" id="finalScore">0</span></div>
+      <div class="stat best"><span class="k">Best</span><span class="v" id="finalBest">0</span></div>
+    </div>
+    <button class="again" id="again">LEAP AGAIN</button>
+  </div>
+</div>
+
+<script type="importmap">
+{ "imports": {
+  "three": "https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js",
+  "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/"
+}}
+</script>
+
+<script type="module">
+import { startGame } from './game.js?v=9';
+
+const $ = (s) => document.querySelector(s);
+const canvas = $('#c');
+const wordmarkEl = $('#wordmark');
+const scoreEl = $('#score');
+const comboEl = $('#combo');
+const hintEl = $('#hint');
+const overEl = $('#over');
+
+let started = false;
+let comboPopT = null;
+
+const hud = {
+  setScore(n){
+    scoreEl.textContent = String(n);
+    if (!started){
+      started = true;
+      wordmarkEl.classList.add('hidden');
+      hintEl.classList.remove('show');
+      scoreEl.classList.add('show');
+    }
+  },
+  setCombo(n){
+    if (n >= 2){
+      comboEl.textContent = '×' + n + ' COMBO';
+      comboEl.classList.add('show', 'pop');
+      clearTimeout(comboPopT);
+      comboPopT = setTimeout(() => comboEl.classList.remove('pop'), 160);
+    } else {
+      comboEl.classList.remove('show');
+    }
+  },
+  setDead(payload){
+    if (!payload){
+      overEl.classList.remove('show');
+      started = false;
+      wordmarkEl.classList.remove('hidden');
+      scoreEl.classList.remove('show');
+      comboEl.classList.remove('show');
+      scoreEl.textContent = '0';
+      hintEl.classList.add('show');
+      return;
+    }
+    $('#finalScore').textContent = String(payload.score);
+    $('#finalBest').textContent = String(payload.best);
+    overEl.classList.add('show');
+    setTimeout(refreshLB, 1200);
+  },
+  setReady(on){
+    hintEl.classList.toggle('show', on !== false);
+  },
+};
+
+const api = startGame({ canvas, hud });
+
+// ── Charge input — hold anywhere to charge, release to leap ──
+// Bound on window so the whole screen is the button; game.js gates by state
+// (ignores charge while DEAD / while the over-card is up).
+addEventListener('pointerdown', (e) => {
+  if (overEl.classList.contains('show')) return;
+  if (e.target.closest('#lb, #lbFull')) return;   // let leaderboard taps through
+  api.chargeStart();
+}, { passive:true });
+addEventListener('pointerup', () => api.chargeRelease(), { passive:true });
+addEventListener('pointercancel', () => api.chargeRelease(), { passive:true });
+
+$('#again').addEventListener('click', () => api.restart());
+
+// ── Champion pill + full leaderboard ──
+const lbEl = $('#lb');
+const lbFullEl = $('#lbFull');
+const lblistEl = $('#lblist');
+let lbData = { rows:[], meId:'' };
+
+function lbInitial(name){
+  const d = document.createElement('span');
+  d.className = 'avf';
+  d.textContent = ((name || '?').trim().charAt(0) || '?').toUpperCase();
+  return d;
+}
+function lbAvatar(r){
+  if (r.head_url){
+    const img = document.createElement('img');
+    img.className = 'av'; img.src = r.head_url; img.alt = ''; img.draggable = false;
+    img.onerror = () => img.replaceWith(lbInitial(r.user_name));
+    return img;
+  }
+  return lbInitial(r.user_name);
+}
+function lbChampionPill(r, isMe){
+  const row = document.createElement('div');
+  row.className = 'lbrow' + (isMe ? ' me' : '');
+  row.innerHTML = '<svg class="crown" viewBox="0 0 24 24"><path d="M3 18 L2 7 L8 12 L12 4 L16 12 L22 7 L21 18 Z"/></svg>';
+  row.appendChild(lbAvatar(r));
+  const nm = document.createElement('span');
+  let name = (r.user_name || '?').trim();
+  if (name.length > 8) name = name.slice(0, 8) + '…';
+  nm.className = 'nm'; nm.textContent = isMe ? 'YOU' : name;
+  row.appendChild(nm);
+  const sc = document.createElement('span');
+  sc.className = 'sc'; sc.textContent = String(Number(r.score) || 0);
+  row.appendChild(sc);
+  row.addEventListener('click', openLbFull);
+  return row;
+}
+function lbFullRow(r, isMe){
+  const row = document.createElement('div');
+  row.className = 'lfrow' + (isMe ? ' me' : '');
+  const rk = document.createElement('span');
+  rk.className = 'rk'; rk.textContent = '#' + r.rank;
+  row.appendChild(rk);
+  row.appendChild(lbAvatar(r));
+  const nm = document.createElement('span');
+  nm.className = 'nm'; nm.textContent = isMe ? 'YOU' : (r.user_name || '?');
+  row.appendChild(nm);
+  const sc = document.createElement('span');
+  sc.className = 'sc'; sc.textContent = String(Number(r.score) || 0);
+  row.appendChild(sc);
+  if (!isMe && r.user_id){
+    row.addEventListener('click', () => window.Aigram && window.Aigram.openAigramProfile(r.user_id));
+  }
+  return row;
+}
+function openLbFull(){
+  lblistEl.innerHTML = '';
+  for (const r of lbData.rows) lblistEl.appendChild(lbFullRow(r, String(r.user_id) === lbData.meId));
+  lbFullEl.classList.add('show');
+  refreshLB();
+}
+$('#lbClose').addEventListener('click', () => lbFullEl.classList.remove('show'));
+
+function renderLB(rows, meId){
+  if (!rows.length){ lbEl.classList.remove('show'); return; }
+  rows = rows.slice().sort((a, b) => (a.rank || 999) - (b.rank || 999));
+  lbData = { rows, meId };
+  lbEl.innerHTML = '';
+  lbEl.appendChild(lbChampionPill(rows[0], String(rows[0].user_id) === meId));
+  lbEl.classList.add('show');
+}
+window.__lbRender = renderLB;
+
+async function refreshLB(){
+  const A = window.Aigram;
+  if (!A || !A.canRank) return;
+  try {
+    const res = await A.callAigramAPI('/note/aigram/ai/game/rank/score/list/by/session_id?session_id=' + A.gameUuid, 'GET');
+    const rows = Array.isArray(res) ? res : (res && res.data) || [];
+    renderLB(rows, String(A.telegramId));
+  } catch (e) { /* keep whatever is shown */ }
+}
+refreshLB();
+</script>
+</body>
+</html>
