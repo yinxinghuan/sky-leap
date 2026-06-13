@@ -657,9 +657,8 @@ export function startGame({ canvas, hud }){
     while (plats[plats.length - 1].idx < AHEAD) spawnNext();
     score = 0; combo = 0; charge = 0; state = IDLE;
     setHero(pickChar());                   // roll a fresh convenience-store character each run
-    // Start with a random sky, then let the weather ticker swap it dynamically
-    // over time (crossfade in tickWeather) — no abrupt per-run snap.
-    setWeather(WEATHERS[Math.floor(Math.random() * WEATHERS.length)]);
+    // Always open on a calm clear sky; the ticker rolls in weather over time.
+    setWeather('clear');
     weatherPhase = 'stable'; weatherPhaseT = 0; weatherNext = null;
     weatherTimer = 12 + Math.random() * 14;   // first change in 12–26s
     hero.position.set(0, PLAT_TOP, current.along);
