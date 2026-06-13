@@ -41,8 +41,8 @@ const GAP_MAX = MAX_DIST * REACH_SAFETY;   // = 5.33, hard cap so full charge al
 const SIZE_BASE = 0.95, SIZE_MIN = 0.62;   // smaller pads (harder landing)
 const SIZE_JITTER = 0.18;
 const DIFF_OVER = 42;             // platform index at which difficulty saturates
-const WARMUP = 2;                 // first N platforms use easy (short + wide) geometry
-const WARMUP_GAP = 4.5;           // short first gaps — reachable on a light tap, but no teleport assist
+const WARMUP = 3;                 // first N platforms use easy geometry, gap eased up gradually
+const WARMUP_GAP = 4.5;           // the very first gap — short + wide so a light tap clears (no teleport assist)
 
 const AHEAD = 6;                  // platforms to keep spawned ahead
 const BEHIND = 2;                 // recycle platforms more than this behind
@@ -71,7 +71,7 @@ export function startGame({ canvas, hud }){
   renderer.toneMappingExposure = 1.0;
 
   const scene = new THREE.Scene();
-  scene.fog = new THREE.Fog(0x9cc2e6, 32, 50);   // thicker haze: pillar bottoms (farthest from the high cam) dissolve into the cloud sea
+  scene.fog = new THREE.Fog(0x9cc2e6, 28, 43);   // heavy haze (no cloud layer): pillar bottoms dissolve into the background
 
   // Orthographic 45° oblique (axonometric) — parallel lines, no vanishing point,
   // low elevation so the tall pillar front faces read (matches the reference).
@@ -256,43 +256,6 @@ export function startGame({ canvas, hud }){
       if (worldZ < camFocus.z - 14) m.position.z += BG_SPAN;          // wrapped behind → ahead
       else if (worldZ > camFocus.z + BG_SPAN) m.position.z -= BG_SPAN; // (safety) wrap back
     }
-  }
-
-  // ── Cloud sea — a real misty floor the pillars sink into (distance fog alone
-  // wasn't thick enough below). Stacked soft-puff planes just under the pads;
-  // they follow the camera (endless) and the fog dissolves their far edge so
-  // there's no hard horizon line. ──
-  function makeCloudTex(){
-    const cv = document.createElement('canvas'); cv.width = cv.height = 256;
-    const g = cv.getContext('2d');
-    for (let i = 0; i < 110; i++){
-      const x = Math.random() * 256, y = Math.random() * 256, r = 16 + Math.random() * 50;
-      const rad = g.createRadialGradient(x, y, 0, x, y, r);
-      const a = 0.05 + Math.random() * 0.12;
-      rad.addColorStop(0, 'rgba(255,255,255,' + a + ')');
-      rad.addColorStop(1, 'rgba(255,255,255,0)');
-      g.fillStyle = rad; g.beginPath(); g.arc(x, y, r, 0, 7); g.fill();
-    }
-    const t = new THREE.CanvasTexture(cv);
-    t.wrapS = t.wrapT = THREE.RepeatWrapping; t.repeat.set(5, 5);
-    return t;
-  }
-  const cloudTex = makeCloudTex();
-  const cloudSea = new THREE.Group();
-  const CLOUD_LAYERS = [{ y: -0.9, o: 0.55 }, { y: -2.1, o: 0.7 }, { y: -3.6, o: 0.85 }];
-  for (const L of CLOUD_LAYERS){
-    const p = new THREE.Mesh(
-      new THREE.PlaneGeometry(240, 240),
-      new THREE.MeshBasicMaterial({ map: cloudTex, color: 0xeaf2fb, transparent: true, opacity: L.o, depthWrite: false, fog: true })
-    );
-    p.rotation.x = -Math.PI / 2; p.position.y = L.y;
-    cloudSea.add(p);
-  }
-  scene.add(cloudSea);
-  function updateCloud(dt){
-    cloudSea.position.x = camFocus.x;
-    cloudSea.position.z = camFocus.z;
-    cloudTex.offset.x += dt * 0.008;          // slow drift so the mist breathes
   }
 
   // charge ring (ground, grows with charge)
@@ -530,7 +493,10 @@ export function startGame({ canvas, hud }){
     const idx = nextIdx++;
     let along, half;
     if (idx <= WARMUP){
-      along = prev ? prev.along + WARMUP_GAP : 0;   // first gaps short + wide → easy but HONESTLY judged
+      // ease the gap UP from WARMUP_GAP toward GAP_NEAR across the warm-up so the
+      // first normal pillar isn't a sudden distance jump (was 4.5 → 6.5 cliff).
+      const r = clamp((idx - 1) / WARMUP, 0, 1);
+      along = prev ? prev.along + lerp(WARMUP_GAP, GAP_NEAR, r) : 0;
       half = SIZE_BASE;
     } else {
       const d = difficultyAt(idx);
@@ -621,12 +587,14 @@ export function startGame({ canvas, hud }){
 
   function judgeLanding(){
     const landAlong = startAlong + dist;
-    // The hero must be FULLY on the pad — its body half-depth has to clear the
-    // edge, else it's "standing in the air" → a miss (matches the visuals).
+    // Land if the hero's CENTRE comes down over the pillar top (|offset| ≤ half).
+    // The old "fully on the pad" rule (half − HERO_HALF) killed jumps that visibly
+    // ended with the hero standing on the pillar. A small grace beyond the edge
+    // (HERO_HALF·0.5) covers a toe-on-the-lip catch.
     let landed = null;
     for (const p of plats){
       if (p.idx <= current.idx) continue;
-      if (Math.abs(landAlong - p.along) <= p.half - HERO_HALF){ landed = p; break; }
+      if (Math.abs(landAlong - p.along) <= p.half + HERO_HALF * 0.5){ landed = p; break; }
     }
     if (!landed){ die(); return; }   // every jump (incl. the first) is judged honestly — no teleport-to-safety
     current = landed;
@@ -790,7 +758,6 @@ export function startGame({ canvas, hud }){
     updateParticles(gdt);
     updateCamera(gdt);
     updateBg();
-    updateCloud(dt);
     composer.render();
   }
 
