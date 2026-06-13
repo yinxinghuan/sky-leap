@@ -136,7 +136,17 @@ export function startGame({ canvas, hud }){
   //    roll. We keep it lightweight (~240 particles) so feed scrolling stays
   //    smooth on mobile. ──
   const WEATHERS = ['clear', 'rain', 'snow', 'haze'];
+  const RAIN_OP = 0.78, SNOW_OP = 0.95;
+  const targetOp = (w) => w === 'rain' ? RAIN_OP : (w === 'snow' ? SNOW_OP : 0);
   let weather = 'clear';
+  // Dynamic weather: between stable spells of WEATHER_STAY seconds, crossfade
+  // (WEATHER_FADE×2 seconds: dim current particles, swap material/visibility,
+  // bring new particles up; fog near/far lerp across the whole window).
+  const WEATHER_STAY_MIN = 18, WEATHER_STAY_MAX = 34;
+  const WEATHER_FADE = 2.0;
+  let weatherPhase = 'stable', weatherPhaseT = 0, weatherTimer = 0, weatherNext = null;
+  let weatherFromFog = [28, 43], weatherToFog = [28, 43];
+  const weatherFogFor = (w) => w === 'haze' ? [22, 36] : [28, 43];
   // Tight box around the hero — particles spread thin if they cover the whole
   // far-haze zone, so keep them in the foreground bubble where they'll read.
   const WX = 10, WZ = 14, WY_BOT = -2, WY_TOP = 13;
@@ -164,13 +174,63 @@ export function startGame({ canvas, hud }){
   scene.add(weatherP);
   function setWeather(w){
     weather = w;
-    weatherP.visible = (w === 'rain' || w === 'snow');
+    const hasParticles = (w === 'rain' || w === 'snow');
+    weatherP.visible = hasParticles;
     weatherP.material = (w === 'rain') ? rainMat : snowMat;
+    // a transition may have left mat.opacity at 0/partial — restore.
+    weatherP.material.opacity = targetOp(w);
     // Haze pulls the existing distance fog tighter — no extra cloud plane
     // (the project history shows plane cloud layers always read worse than
     // heavy distance fog).
-    scene.fog.near = (w === 'haze') ? 22 : 28;
-    scene.fog.far  = (w === 'haze') ? 36 : 43;
+    const [n, f] = weatherFogFor(w);
+    scene.fog.near = n; scene.fog.far = f;
+  }
+
+  // Dynamic switcher: drives the crossfade state machine each frame.
+  function tickWeather(dt){
+    if (weatherPhase === 'stable'){
+      weatherTimer -= dt;
+      if (weatherTimer <= 0){
+        const opts = WEATHERS.filter(x => x !== weather);
+        weatherNext = opts[Math.floor(Math.random() * opts.length)];
+        weatherFromFog = [scene.fog.near, scene.fog.far];
+        weatherToFog = weatherFogFor(weatherNext);
+        weatherPhase = 'fadeout';
+        weatherPhaseT = 0;
+      }
+      return;
+    }
+    weatherPhaseT += dt;
+    const total = WEATHER_FADE * 2;
+    const totalP = clamp(((weatherPhase === 'fadeout' ? weatherPhaseT : WEATHER_FADE + weatherPhaseT) / total), 0, 1);
+    scene.fog.near = lerp(weatherFromFog[0], weatherToFog[0], totalP);
+    scene.fog.far  = lerp(weatherFromFog[1], weatherToFog[1], totalP);
+    if (weatherPhase === 'fadeout'){
+      const t = clamp(weatherPhaseT / WEATHER_FADE, 0, 1);
+      if (weatherP.material) weatherP.material.opacity = targetOp(weather) * (1 - t);
+      if (weatherPhaseT >= WEATHER_FADE){
+        // swap to the new weather's particles/material
+        weather = weatherNext;
+        const hasParticles = (weather === 'rain' || weather === 'snow');
+        weatherP.visible = hasParticles;
+        if (hasParticles){
+          weatherP.material = (weather === 'rain') ? rainMat : snowMat;
+          weatherP.material.opacity = 0;
+        }
+        weatherPhase = 'fadein';
+        weatherPhaseT = 0;
+      }
+    } else { // fadein
+      const t = clamp(weatherPhaseT / WEATHER_FADE, 0, 1);
+      if (weatherP.visible && weatherP.material) weatherP.material.opacity = targetOp(weather) * t;
+      if (weatherPhaseT >= WEATHER_FADE){
+        if (weatherP.visible) weatherP.material.opacity = targetOp(weather);
+        weatherPhase = 'stable';
+        weatherPhaseT = 0;
+        weatherTimer = WEATHER_STAY_MIN + Math.random() * (WEATHER_STAY_MAX - WEATHER_STAY_MIN);
+        weatherNext = null;
+      }
+    }
   }
 
   // ── Bloom post-processing — the core "lavish" lever (emissives + sun glow) ──
@@ -597,7 +657,11 @@ export function startGame({ canvas, hud }){
     while (plats[plats.length - 1].idx < AHEAD) spawnNext();
     score = 0; combo = 0; charge = 0; state = IDLE;
     setHero(pickChar());                   // roll a fresh convenience-store character each run
-    setWeather(WEATHERS[Math.floor(Math.random() * WEATHERS.length)]); // roll the sky's mood each run
+    // Start with a random sky, then let the weather ticker swap it dynamically
+    // over time (crossfade in tickWeather) — no abrupt per-run snap.
+    setWeather(WEATHERS[Math.floor(Math.random() * WEATHERS.length)]);
+    weatherPhase = 'stable'; weatherPhaseT = 0; weatherNext = null;
+    weatherTimer = 12 + Math.random() * 14;   // first change in 12–26s
     hero.position.set(0, PLAT_TOP, current.along);
     hero.scale.set(1, 1, 1);
     hero.rotation.set(0, 0, 0);
@@ -671,14 +735,14 @@ export function startGame({ canvas, hud }){
       camKick = 0.55;
       doSlow(0.42, 0.18);
       sfxPerfect(combo);
-      hud.pop(combo >= 2 ? 'PERFECT ×' + combo : 'PERFECT');
+      hud.pop(combo >= 2 ? 'PERFECT ×' + combo : 'PERFECT', 'perfect');
     } else if (d <= eh * 0.7){
       // GOOD — keep combo, soft dust, rotating shout
       score += 1;
       flashPlatform(landed, false);
       puffFx(0, PLAT_TOP, landAlong, { count: 4 });
       sfxLand();
-      hud.pop(pickWord(GOOD_WORDS));
+      hud.pop(pickWord(GOOD_WORDS), 'good');
     } else {
       // plain landing — combo resets. A foot-on-the-very-edge save shouts
       // BARELY! so the player feels the close call; otherwise rotate phew/okay.
@@ -687,7 +751,8 @@ export function startGame({ canvas, hud }){
       puffFx(0, PLAT_TOP, landAlong, { count: 5 });
       sfxLand();
       const edgeMargin = landed.half + HERO_HALF;
-      hud.pop(d >= edgeMargin * 0.85 ? 'BARELY!' : pickWord(PLAIN_WORDS));
+      const isClose = d >= edgeMargin * 0.85;
+      hud.pop(isClose ? 'BARELY!' : pickWord(PLAIN_WORDS), isClose ? 'barely' : 'plain');
     }
     hud.setScore(score);
     hud.setCombo(combo);
@@ -762,6 +827,9 @@ export function startGame({ canvas, hud }){
       mp.setX(i, mp.getX(i) + Math.sin(now / 1000 * 0.3 + i) * dt * 0.12);
     }
     mp.needsUpdate = true;
+
+    // weather state machine — random crossfades over time, not per-run snap
+    tickWeather(dt);
 
     // weather particles — rain falls fast and straight, snow drifts slow and sways
     if (weatherP.visible){

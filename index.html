@@ -93,20 +93,31 @@
     to   { transform:translateX(-50%) scale(1); }
   }
 
-  /* ── Floating PERFECT / combo pop ── */
+  /* ── Floating per-jump rating pop — colour shifts by tone, animation
+        holds for a moment so the call is actually readable. ── */
   #pop {
     top:38%; left:50%; transform:translate(-50%,-50%);
     font-weight:700; font-size:42px; letter-spacing:.02em; white-space:nowrap; text-align:center;
-    background:linear-gradient(180deg, #fff, var(--pink-2));
     -webkit-background-clip:text; background-clip:text; color:transparent;
+    background-image:linear-gradient(180deg, #fff, var(--pink-2));   /* default fallback */
     filter:drop-shadow(0 4px 16px rgba(255,77,151,.5)) drop-shadow(0 1px 0 rgba(255,255,255,.6));
     opacity:0;
   }
-  #pop.go { animation:sl-pop .76s ease-out; }
+  #pop.tone-perfect { background-image:linear-gradient(180deg, #fff 4%, #ffd87a 52%, #ff9d2e 100%);
+    filter:drop-shadow(0 4px 18px rgba(255,170,40,.55)) drop-shadow(0 1px 0 rgba(255,255,255,.6)); }
+  #pop.tone-good    { background-image:linear-gradient(180deg, #fff 6%, #b6f5d2 50%, #2dd680 100%);
+    filter:drop-shadow(0 4px 18px rgba(45,214,128,.55)) drop-shadow(0 1px 0 rgba(255,255,255,.6)); }
+  #pop.tone-plain   { background-image:linear-gradient(180deg, #fff 6%, #d5e8fb 50%, #7ea7d5 100%);
+    filter:drop-shadow(0 4px 18px rgba(126,167,213,.55)) drop-shadow(0 1px 0 rgba(255,255,255,.6)); }
+  #pop.tone-barely  { background-image:linear-gradient(180deg, #fff 4%, #ffbca5 50%, #ff4d4d 100%);
+    filter:drop-shadow(0 4px 18px rgba(255,80,80,.6)) drop-shadow(0 1px 0 rgba(255,255,255,.6)); }
+  #pop.go { animation:sl-pop 1.35s ease-out; }
   @keyframes sl-pop {
-    0%   { opacity:0; transform:translate(-50%,-50%) scale(.5); }
-    22%  { opacity:1; transform:translate(-50%,-64%) scale(1.12); }
-    100% { opacity:0; transform:translate(-50%,-104%) scale(1); }
+    0%   { opacity:0; transform:translate(-50%,-50%) scale(.55); }
+    14%  { opacity:1; transform:translate(-50%,-64%) scale(1.16); }
+    24%  { opacity:1; transform:translate(-50%,-72%) scale(1.02); }
+    72%  { opacity:1; transform:translate(-50%,-82%) scale(1.0); }   /* hold steady so the call is actually readable */
+    100% { opacity:0; transform:translate(-50%,-112%) scale(.98); }
   }
 
   /* ── Guide — a single reused touch_app finger icon hinting "hold" ── */
@@ -352,7 +363,7 @@
 </script>
 
 <script type="module">
-import { startGame } from './game.js?v=47';
+import { startGame } from './game.js?v=48';
 
 const $ = (s) => document.querySelector(s);
 const canvas = $('#c');
@@ -411,11 +422,11 @@ const hud = {
   setReady(on){
     guideEl.classList.toggle('show', on !== false && !started);
   },
-  pop(text){
+  pop(text, tone){
     popEl.textContent = text;
-    popEl.classList.remove('go');
+    popEl.classList.remove('go', 'tone-perfect', 'tone-good', 'tone-plain', 'tone-barely');
     void popEl.offsetWidth;   // restart the animation
-    popEl.classList.add('go');
+    popEl.classList.add('go', 'tone-' + (tone || 'perfect'));
   },
 };
 
