@@ -154,8 +154,9 @@ export function startGame({ canvas, hud }){
   // so the existing jump code drives root.scale / flip.rotation unchanged, and
   // the rig limbs animate through the leap. A fresh character is rolled each run
   // (instant variety, no pre-game pick — stays true to the scroll-feed rule). ──
-  const ROSTER = ['shopkeeper', 'granny', 'oldman', 'blonde', 'kid', 'businessman',
-    'officeWoman', 'student', 'darkWoman', 'worker', 'teen', 'fitWoman', 'chef', 'bigGuy'];
+  // Full library: 14 base townsfolk + 10 profession/pop-culture archetypes + 6 monsters.
+  // Derived from CHARACTERS so the roster auto-tracks the library (every builder carries a rig).
+  const ROSTER = Object.keys(CHARACTERS);
   const HERO_SCALE = 0.76;
   let charIdx = Math.floor(Math.random() * ROSTER.length);
   function pickChar(){ charIdx = (charIdx + 1) % ROSTER.length; return ROSTER[charIdx]; }
