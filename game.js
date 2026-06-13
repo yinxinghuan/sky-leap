@@ -14,7 +14,7 @@ import { EffectComposer } from 'three/addons/postprocessing/EffectComposer.js';
 import { RenderPass } from 'three/addons/postprocessing/RenderPass.js';
 import { UnrealBloomPass } from 'three/addons/postprocessing/UnrealBloomPass.js';
 import { OutputPass } from 'three/addons/postprocessing/OutputPass.js';
-import { platStone, platPillar, runeDisk, bgPillars, STONE_TONES } from './builders/skyruins.js?v=31';
+import { platStone, platPillar, runeDisk, bgPillars, STONE_TONES } from './builders/skyruins.js?v=32';
 import { CHARACTERS } from './builders/characters.js?v=1';
 
 // --- tunables ---------------------------------------------------------------
@@ -235,7 +235,7 @@ export function startGame({ canvas, hud }){
   const bg = bgPillars(28);
   scene.add(bg);
   const bgItems = bg.children;
-  const BG_STEP = 1.45, BG_SPAN = bgItems.length * BG_STEP;   // tighter band (~40u, was ~90) → far towers don't project into the upper sky
+  const BG_STEP = 2.6, BG_SPAN = bgItems.length * BG_STEP;   // spread for a staggered skyline
   const BG_PARALLAX = 0.7;          // <1 → drifts slower than the camera
   function layoutBg(){
     for (let i = 0; i < bgItems.length; i++){
@@ -246,7 +246,9 @@ export function startGame({ canvas, hud }){
       // (y≈0) so they read as a low, distant band, never towering pillars.
       const side = i % 4 === 0 ? -1 : 1;                 // a few on the near side, far out; most deep
       const farX = side === 1 ? 13 + (i * 13 % 20) : -(20 + (i * 11 % 12));
-      m.position.set(farX, -8.0 - (i * 7 % 4) * 0.7, (i * BG_STEP) % BG_SPAN);  // tops pushed deep below the play line → faint low band, not sky-reaching streaks
+      // tops pushed VERY far down + staggered → long thin columns hang low and
+      // sink into the fog, their tops scattered well below the play line.
+      m.position.set(farX, -12 - (i * 7 % 5) * 2.4, (i * BG_STEP) % BG_SPAN);
     }
   }
   function updateBg(){

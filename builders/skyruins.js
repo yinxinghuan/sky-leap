@@ -94,8 +94,8 @@ export function bgPillars(n = 28){
   const g = new THREE.Group();
   for (let i = 0; i < n; i++){
     const w = 0.24 + (i * 17 % 4) / 16;                      // VERY thin (0.24–0.43) → reads small/far
-    const h = 1.4 + (i * 23 % 4) * 0.4;                      // very SHORT (1.4–2.6) → low faint stubs, never towering
-    const m = gradPillarMesh(w, w, 0xb2d4ef, h, 0xd0e4f5);   // very faint, near sky-blue → barely-there skyline whisper
+    const h = 18 + (i * 23 % 6) * 3.5;                       // VERY LONG (18–35.5), staggered → long columns sinking far into the fog
+    const m = gradPillarMesh(w, w, 0xb2d4ef, h, 0xd0e4f5);   // very faint, near sky-blue → dissolves into the haze
     m.castShadow = false; m.receiveShadow = false;
     g.add(m);
   }
