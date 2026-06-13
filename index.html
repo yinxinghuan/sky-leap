@@ -106,78 +106,41 @@
     100% { opacity:0; transform:translate(-50%,-104%) scale(1); }
   }
 
-  /* ── Guide — press-and-hold to charge, release to leap ── */
+  /* ── Guide — a single reused touch_app finger icon hinting "hold" ── */
   #guide {
-    bottom:calc(15% + env(safe-area-inset-bottom)); left:50%; transform:translateX(-50%);
+    bottom:calc(17% + env(safe-area-inset-bottom)); left:50%; transform:translateX(-50%);
     display:flex; flex-direction:column; align-items:center; gap:14px;
     opacity:0; transition:opacity .45s ease;
   }
   #guide.show { opacity:1; }
-  #guide .g-stage { position:relative; width:150px; height:124px; }
-  #guide .g-arc { position:absolute; inset:0; width:100%; height:100%; overflow:visible; }
-  #guide .g-arc path {
-    fill:none; stroke:rgba(255,255,255,.92); stroke-width:3; stroke-linecap:round; stroke-dasharray:2 8;
-    filter:drop-shadow(0 1px 4px rgba(58,76,128,.4));
-    animation:g-arc 2.8s ease-in-out infinite;
+  #guide .g-finger {
+    position:relative; width:58px; height:58px; transform-origin:50% 24%;
+    animation:g-press 1.5s ease-in-out infinite;
   }
-  /* charge ring — fills while holding, bursts on release */
-  #guide .g-charge {
-    position:absolute; left:16px; bottom:4px; width:60px; height:60px;
-    transform-origin:center; animation:g-charge 2.8s ease-in-out infinite;
+  #guide .g-finger svg {
+    width:100%; height:100%; display:block; fill:rgba(255,255,255,.96);
+    filter:drop-shadow(0 0 6px rgba(58,76,128,.55)) drop-shadow(0 2px 4px rgba(0,0,0,.25));
   }
-  #guide .g-charge circle { fill:none; stroke-width:5; stroke-linecap:round; }
-  #guide .g-charge .trk { stroke:rgba(255,255,255,.4); }
-  #guide .g-charge .prg {
-    stroke:var(--gold); stroke-dasharray:151; stroke-dashoffset:151;
-    transform:rotate(-90deg); transform-origin:center;
-    filter:drop-shadow(0 0 6px rgba(255,207,77,.8));
-    animation:g-fill 2.8s ease-in-out infinite;
+  /* ripple pulsing under the fingertip = the press target */
+  #guide .g-ripple {
+    position:absolute; left:46%; top:26%; width:20px; height:20px; margin:-10px 0 0 -10px;
+    border-radius:50%; border:2px solid rgba(255,255,255,.85);
+    box-shadow:0 0 12px rgba(255,255,255,.5);
+    animation:g-ripple 1.5s ease-out infinite;
   }
-  /* the touch dot — presses, holds, then leaps up-and-forward */
-  #guide .g-dot {
-    position:absolute; left:31px; bottom:19px; width:32px; height:32px; border-radius:50%;
-    background:radial-gradient(circle at 38% 32%, #fff, #ffe1ee 70%, #ffc4dd);
-    border:2px solid rgba(255,255,255,.9);
-    box-shadow:0 6px 16px rgba(58,76,128,.4), inset 0 -3px 6px rgba(255,120,170,.4);
-    animation:g-dot 2.8s ease-in-out infinite;
-  }
-  #guide .g-label { position:relative; height:24px; width:200px; text-align:center; }
-  #guide .g-label .ph {
-    position:absolute; left:0; right:0; font-weight:600; font-size:16px; letter-spacing:.04em;
+  #guide .g-label {
+    font-weight:600; font-size:16px; letter-spacing:.04em;
     color:#fff; text-shadow:0 2px 8px rgba(58,76,128,.5);
   }
-  #guide .g-label .hold { animation:g-lab-hold 2.8s ease-in-out infinite; }
-  #guide .g-label .rel  { color:var(--gold); animation:g-lab-rel 2.8s ease-in-out infinite; }
-
-  @keyframes g-dot {
-    0%      { transform:translate(0,-10px) scale(.9);  opacity:0; }
-    6%      { transform:translate(0,3px)   scale(.9);  opacity:1; }  /* press */
-    44%     { transform:translate(0,4px)   scale(.86); opacity:1; }  /* hold */
-    50%     { transform:translate(0,-5px)  scale(1.16); opacity:1; } /* release pop */
-    64%     { transform:translate(26px,-32px) scale(1);  opacity:1; }/* leaping */
-    78%     { transform:translate(56px,-54px) scale(.92); opacity:1; }
-    88%,100%{ transform:translate(64px,-62px) scale(.84); opacity:0; }
+  @keyframes g-press {
+    0%,100% { transform:translateY(-5px) scale(1); }
+    42%,68% { transform:translateY(3px) scale(.93); }   /* press down + hold */
   }
-  @keyframes g-fill {
-    0%, 6%      { stroke-dashoffset:151; }
-    44%         { stroke-dashoffset:0; }
-    46%,100%    { stroke-dashoffset:151; }
+  @keyframes g-ripple {
+    0%,28%  { transform:scale(.5); opacity:0; }
+    44%     { opacity:.85; }
+    100%    { transform:scale(2.4); opacity:0; }
   }
-  @keyframes g-charge {
-    0%,4%   { opacity:0; transform:scale(.6); }
-    8%      { opacity:1; transform:scale(1); }
-    44%     { opacity:1; transform:scale(1); }
-    52%     { opacity:0; transform:scale(1.8); }   /* burst */
-    100%    { opacity:0; transform:scale(1); }
-  }
-  @keyframes g-arc {
-    0%,48%   { opacity:0; }
-    58%      { opacity:.95; }
-    80%      { opacity:.95; }
-    92%,100% { opacity:0; }
-  }
-  @keyframes g-lab-hold { 0%,3%{opacity:0;} 9%,44%{opacity:1;} 50%,100%{opacity:0;} }
-  @keyframes g-lab-rel  { 0%,48%{opacity:0;} 55%,80%{opacity:1;} 88%,100%{opacity:0;} }
 
   /* ── Game over card — frosted glass ── */
   #over {
@@ -331,11 +294,8 @@
   #lbClose:active { transform:translateY(2px); background:rgba(255,255,255,.7); }
 
   @media (prefers-reduced-motion: reduce) {
-    #guide .g-arc path, #guide .g-charge, #guide .g-charge .prg, #guide .g-dot,
-    #guide .g-label .hold, #guide .g-label .rel { animation:none; }
-    #guide .g-dot { transform:translate(0,3px) scale(.88); }
-    #guide .g-charge .prg { stroke-dashoffset:38; }
-    #guide .g-label .rel { opacity:0; }
+    #guide .g-finger, #guide .g-ripple { animation:none; }
+    #guide .g-finger { transform:translateY(0); }
     #over.show, #over .card, #lbFull.show, #lbFull .lcard, #score.bump, #combo.pop { animation:none; }
   }
 </style>
@@ -348,18 +308,12 @@
   <div id="combo" class="hud"></div>
   <div id="pop" class="hud"></div>
   <div id="guide" class="hud">
-    <div class="g-stage">
-      <svg class="g-arc" viewBox="0 0 150 124" preserveAspectRatio="none"><path d="M46 100 Q84 6 114 30"/></svg>
-      <svg class="g-charge" viewBox="0 0 60 60">
-        <circle class="trk" cx="30" cy="30" r="24"/>
-        <circle class="prg" cx="30" cy="30" r="24"/>
-      </svg>
-      <span class="g-dot"></span>
+    <div class="g-finger">
+      <span class="g-ripple"></span>
+      <!-- Material Icons touch_app (Apache 2.0) — the shared "ghost finger" gesture glyph -->
+      <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 11.24V7.5C9 6.12 10.12 5 11.5 5S14 6.12 14 7.5v3.74c1.21-.81 2-2.18 2-3.74C16 5.01 13.99 3 11.5 3S7 5.01 7 7.5c0 1.56.79 2.93 2 3.74zm9.84 4.63l-4.54-2.26c-.17-.07-.35-.11-.54-.11H13v-6c0-.83-.67-1.5-1.5-1.5S10 6.67 10 7.5v10.74l-3.43-.72c-.08-.01-.15-.03-.24-.03-.31 0-.59.13-.79.33l-.79.8 4.94 4.94c.27.27.65.44 1.06.44h6.79c.75 0 1.33-.55 1.44-1.28l.75-5.27c.01-.07.02-.14.02-.2 0-.62-.38-1.16-.92-1.38z"/></svg>
     </div>
-    <div class="g-label">
-      <span class="ph hold">Press &amp; hold to charge</span>
-      <span class="ph rel">Release to leap!</span>
-    </div>
+    <div class="g-label">Hold to charge</div>
   </div>
   <div id="lb"></div>
 </div>
