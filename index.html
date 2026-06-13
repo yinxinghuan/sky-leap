@@ -40,20 +40,21 @@
 
   /* ── Wordmark — gradient brand title, title state only ── */
   #wordmark {
-    top:max(30px,calc(env(safe-area-inset-top) + 14px)); left:50%;
+    top:max(26px,calc(env(safe-area-inset-top) + 10px)); left:50%;
     transform:translateX(-50%);
+    width:max-content; max-width:94vw;
     text-align:center; line-height:1;
     transition:opacity .4s ease, transform .4s ease;
   }
   #wordmark .b {
-    display:block; font-weight:700; font-size:56px; letter-spacing:.01em;
-    background:linear-gradient(170deg, #fff 8%, var(--pink-2) 58%, var(--pink) 100%);
+    display:block; font-weight:700; font-size:84px; line-height:.78; letter-spacing:.005em;
+    background:linear-gradient(170deg, #fff 6%, var(--pink-2) 56%, var(--pink) 100%);
     -webkit-background-clip:text; background-clip:text; color:transparent;
-    filter:drop-shadow(0 3px 10px rgba(58,44,82,.32)) drop-shadow(0 1px 0 rgba(255,255,255,.5));
+    filter:drop-shadow(0 4px 12px rgba(58,44,82,.34)) drop-shadow(0 1px 0 rgba(255,255,255,.5));
   }
   #wordmark .sub {
-    display:block; font-weight:500; font-size:13px; letter-spacing:.34em;
-    color:rgba(58,44,82,.66); margin-top:8px; text-transform:uppercase;
+    display:block; font-weight:500; font-size:14px; letter-spacing:.34em;
+    color:rgba(58,44,82,.66); margin-top:12px; text-transform:uppercase;
     padding-left:.34em;
   }
   #wordmark.hidden { opacity:0; transform:translate(-50%,-16px); }
@@ -303,7 +304,7 @@
 <body>
 <div id="wrap">
   <canvas id="c"></canvas>
-  <div id="wordmark" class="hud"><span class="b">Sky Leap</span><span class="sub">hold &amp; release to soar</span></div>
+  <div id="wordmark" class="hud"><span class="b">Sky<br>Leap</span><span class="sub">hold &amp; release to soar</span></div>
   <div id="score" class="hud">0</div>
   <div id="combo" class="hud"></div>
   <div id="pop" class="hud"></div>
