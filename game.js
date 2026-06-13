@@ -129,6 +129,50 @@ export function startGame({ canvas, hud }){
   }));
   scene.add(motes);
 
+  // ── Random weather — every run rolls one of: clear, rain (cool blue
+  //    streaks falling fast), snow (white flakes drifting), or haze (the same
+  //    distance fog pulled in closer so the world feels socked-in). One
+  //    Points cloud is reused across rain/snow; the material is swapped on
+  //    roll. We keep it lightweight (~240 particles) so feed scrolling stays
+  //    smooth on mobile. ──
+  const WEATHERS = ['clear', 'rain', 'snow', 'haze'];
+  let weather = 'clear';
+  // Tight box around the hero — particles spread thin if they cover the whole
+  // far-haze zone, so keep them in the foreground bubble where they'll read.
+  const WX = 10, WZ = 14, WY_BOT = -2, WY_TOP = 13;
+  const WCOUNT = 700;       // dense enough to read as actual weather
+  const wGeo = new THREE.BufferGeometry();
+  const wPos = new Float32Array(WCOUNT * 3);
+  for (let i = 0; i < WCOUNT; i++){
+    wPos[i * 3]     = (Math.random() * 2 - 1) * WX;
+    wPos[i * 3 + 1] = Math.random() * (WY_TOP - WY_BOT) + WY_BOT;
+    wPos[i * 3 + 2] = (Math.random() * 2 - 1) * WZ;
+  }
+  wGeo.setAttribute('position', new THREE.BufferAttribute(wPos, 3));
+  // sizeAttenuation:false keeps the dot a fixed screen size, so rain/snow
+  // doesn't shrink to invisible specks behind the camera distance.
+  const rainMat = new THREE.PointsMaterial({
+    color: 0xc8d6ee, size: 3.0, transparent: true, opacity: 0.78,
+    blending: THREE.NormalBlending, depthWrite: false, sizeAttenuation: false, fog: false,
+  });
+  const snowMat = new THREE.PointsMaterial({
+    color: 0xffffff, size: 5.0, transparent: true, opacity: 0.95,
+    blending: THREE.NormalBlending, depthWrite: false, sizeAttenuation: false, fog: false,
+  });
+  const weatherP = new THREE.Points(wGeo, snowMat);
+  weatherP.visible = false;
+  scene.add(weatherP);
+  function setWeather(w){
+    weather = w;
+    weatherP.visible = (w === 'rain' || w === 'snow');
+    weatherP.material = (w === 'rain') ? rainMat : snowMat;
+    // Haze pulls the existing distance fog tighter — no extra cloud plane
+    // (the project history shows plane cloud layers always read worse than
+    // heavy distance fog).
+    scene.fog.near = (w === 'haze') ? 22 : 28;
+    scene.fog.far  = (w === 'haze') ? 36 : 43;
+  }
+
   // ── Bloom post-processing — the core "lavish" lever (emissives + sun glow) ──
   const composer = new EffectComposer(renderer);
   composer.addPass(new RenderPass(scene, camera));
@@ -531,6 +575,14 @@ export function startGame({ canvas, hud }){
   let charge = 0;
   let current = null;
   let score = 0, combo = 0, best = readBest();
+  // Per-jump rating banter — every landing pops a one-word call. Pull from a
+  // rotating bank so consecutive jumps don't repeat the same word, and reserve
+  // BARELY! for foot-on-the-edge close calls (>=85% of the footprint margin
+  // hanging off the pad). PERFECT keeps its own branded shout below.
+  const GOOD_WORDS  = ['NICE!', 'SMOOTH!', 'CLEAN!', 'NEAT!', 'SLICK!'];
+  const PLAIN_WORDS = ['OKAY!', 'PHEW!', 'CLOSE!'];
+  let popI = 0;
+  const pickWord = (arr) => arr[(popI++) % arr.length];
   let deadTimer = 0;
   let launchT = 0, airTime = 0, startAlong = 0, dist = 0, apex = 0, trailT = 0;
 
@@ -545,6 +597,7 @@ export function startGame({ canvas, hud }){
     while (plats[plats.length - 1].idx < AHEAD) spawnNext();
     score = 0; combo = 0; charge = 0; state = IDLE;
     setHero(pickChar());                   // roll a fresh convenience-store character each run
+    setWeather(WEATHERS[Math.floor(Math.random() * WEATHERS.length)]); // roll the sky's mood each run
     hero.position.set(0, PLAT_TOP, current.along);
     hero.scale.set(1, 1, 1);
     hero.rotation.set(0, 0, 0);
@@ -620,17 +673,21 @@ export function startGame({ canvas, hud }){
       sfxPerfect(combo);
       hud.pop(combo >= 2 ? 'PERFECT ×' + combo : 'PERFECT');
     } else if (d <= eh * 0.7){
-      // GOOD — keep combo, soft dust
+      // GOOD — keep combo, soft dust, rotating shout
       score += 1;
       flashPlatform(landed, false);
       puffFx(0, PLAT_TOP, landAlong, { count: 4 });
       sfxLand();
+      hud.pop(pickWord(GOOD_WORDS));
     } else {
-      // plain landing — combo resets
+      // plain landing — combo resets. A foot-on-the-very-edge save shouts
+      // BARELY! so the player feels the close call; otherwise rotate phew/okay.
       combo = 0;
       score += 1;
       puffFx(0, PLAT_TOP, landAlong, { count: 5 });
       sfxLand();
+      const edgeMargin = landed.half + HERO_HALF;
+      hud.pop(d >= edgeMargin * 0.85 ? 'BARELY!' : pickWord(PLAIN_WORDS));
     }
     hud.setScore(score);
     hud.setCombo(combo);
@@ -705,6 +762,20 @@ export function startGame({ canvas, hud }){
       mp.setX(i, mp.getX(i) + Math.sin(now / 1000 * 0.3 + i) * dt * 0.12);
     }
     mp.needsUpdate = true;
+
+    // weather particles — rain falls fast and straight, snow drifts slow and sways
+    if (weatherP.visible){
+      weatherP.position.z = hz;
+      const wp = weatherP.geometry.attributes.position;
+      const fallSpeed = weather === 'rain' ? 14 : 1.2;
+      for (let i = 0; i < wp.count; i++){
+        let y = wp.getY(i) - dt * fallSpeed;
+        if (y < WY_BOT) y = WY_TOP;
+        wp.setY(i, y);
+        if (weather === 'snow') wp.setX(i, wp.getX(i) + Math.sin(now / 1000 * 0.5 + i) * dt * 0.18);
+      }
+      wp.needsUpdate = true;
+    }
 
     if (state === CHARGING){
       charge = Math.min(charge + gdt, CHARGE_MAX);

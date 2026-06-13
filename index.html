@@ -40,21 +40,23 @@
 
   /* ── Wordmark — gradient brand title, title state only ── */
   #wordmark {
-    top:max(26px,calc(env(safe-area-inset-top) + 10px)); left:50%;
+    /* Sit below the leaderboard champion-pill row so the two don't collide */
+    top:max(84px,calc(env(safe-area-inset-top) + 68px)); left:50%;
     transform:translateX(-50%);
     width:max-content; max-width:94vw;
-    text-align:center; line-height:1;
+    text-align:center; line-height:1; padding-bottom:6px;     /* breathing room so the P/L descenders aren't clipped */
     transition:opacity .4s ease, transform .4s ease;
   }
   #wordmark .b {
-    display:block; font-weight:700; font-size:84px; line-height:.78; letter-spacing:.005em;
+    display:block; font-weight:700; font-size:84px; line-height:.86; letter-spacing:.005em;
+    padding:.05em 0 .12em;                                    /* extra glyph room — Fredoka's descender box + drop-shadow can clip otherwise */
     background:linear-gradient(170deg, #fff 6%, var(--pink-2) 56%, var(--pink) 100%);
     -webkit-background-clip:text; background-clip:text; color:transparent;
     filter:drop-shadow(0 4px 12px rgba(58,44,82,.34)) drop-shadow(0 1px 0 rgba(255,255,255,.5));
   }
   #wordmark .sub {
     display:block; font-weight:500; font-size:14px; letter-spacing:.34em;
-    color:rgba(58,44,82,.66); margin-top:12px; text-transform:uppercase;
+    color:rgba(58,44,82,.66); margin-top:8px; text-transform:uppercase;
     padding-left:.34em;
   }
   #wordmark.hidden { opacity:0; transform:translate(-50%,-16px); }
@@ -350,7 +352,7 @@
 </script>
 
 <script type="module">
-import { startGame } from './game.js?v=45';
+import { startGame } from './game.js?v=47';
 
 const $ = (s) => document.querySelector(s);
 const canvas = $('#c');
