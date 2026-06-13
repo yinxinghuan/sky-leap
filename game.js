@@ -572,7 +572,7 @@ export function startGame({ canvas, hud }){
     dist = jumpDist(c);
     apex = arcHeight(c);
     airTime = AIR_BASE + c * AIR_EXTRA;
-    startAlong = current.along;
+    startAlong = hero.position.z;   // launch from where the hero actually STANDS (edge or centre), not the pad centre
     launchT = 0; trailT = 0;
     state = LAUNCH;
     ring.material.opacity = 0;
@@ -587,24 +587,22 @@ export function startGame({ canvas, hud }){
 
   function judgeLanding(){
     const landAlong = startAlong + dist;
-    // Land if the hero's CENTRE comes down over the pillar top (|offset| ≤ half).
-    // The old "fully on the pad" rule (half − HERO_HALF) killed jumps that visibly
-    // ended with the hero standing on the pillar. A small grace beyond the edge
-    // (HERO_HALF·0.5) covers a toe-on-the-lip catch.
+    // Success as long as the hero's foot still catches the pillar top — i.e. its
+    // footprint overlaps the top (|offset| ≤ half + HERO_HALF). Only a complete
+    // whiff (foot entirely past the edge) misses. The hero then rests where it
+    // came down (no centre-snap), so an edge landing visibly stays on the edge.
     let landed = null;
     for (const p of plats){
       if (p.idx <= current.idx) continue;
-      if (Math.abs(landAlong - p.along) <= p.half + HERO_HALF * 0.5){ landed = p; break; }
+      if (Math.abs(landAlong - p.along) <= p.half + HERO_HALF){ landed = p; break; }  // any foot-on-pillar = landed; only a complete whiff misses
     }
     if (!landed){ die(); return; }   // every jump (incl. the first) is judged honestly — no teleport-to-safety
     current = landed;
-    const eh = Math.max(0.12, landed.half - HERO_HALF);   // effective landing half
-    // Always rest the hero dead-centre on the pad it reached, so where it lands
-    // matches where it visually should (an off-centre rest reads as "hanging off
-    // the edge" under the 45° ortho view). Scoring below still uses the true jump
-    // offset `d`, so accuracy is rewarded even though the rest pose is centred.
+    const eh = Math.max(0.12, landed.half - HERO_HALF);   // central zone for PERFECT/GOOD scoring
     const d = Math.abs(landAlong - landed.along);
-    hero.position.set(0, PLAT_TOP, landed.along);
+    // Rest where the hero actually came down — do NOT snap to centre. An edge
+    // landing stays on the edge; the next jump starts from here (see chargeRelease).
+    hero.position.set(0, PLAT_TOP, landAlong);
     if (d <= eh * 0.3){
       // PERFECT — gold burst + screen bounce + slow-mo + chime, combo escalates
       combo += 1;
