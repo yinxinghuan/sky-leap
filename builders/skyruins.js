@@ -16,8 +16,8 @@ import { P, box, darken } from '../lib/prims.js';
 export const STONE_TONES = [0xe6bcae, 0xd9aeae, 0xe9cbac, 0xceb2bd];
 const PAD = 0xf2e6a8;                 // pale yellow glowing landing pad (ref)
 const PILLAR_H = 16;                  // pillars run from y=0 down to y=-16
-const PILLAR_TOP = 0xf09ab0;          // saturated rose-pink top (pinker per ref)
-const PILLAR_BOT = 0xf4ccd6;          // pale PINK bottom (stays in the pink family, not cream)
+const PILLAR_TOP = 0xf2649e;          // vivid brand-family candy pink top
+const PILLAR_BOT = 0xf5b1c7;          // platform brand pink (#F5B1C7) bottom — whole pillar reads brand-pink
 
 const clamp01 = v => Math.max(0, Math.min(1, v));
 
@@ -93,9 +93,9 @@ export function runeDisk(half, w){
 export function bgPillars(n = 28){
   const g = new THREE.Group();
   for (let i = 0; i < n; i++){
-    const w = 0.26 + (i * 17 % 4) / 14;                      // VERY thin (0.26–0.47) → reads small/far
-    const h = 3.5 + (i * 23 % 5) * 0.5;                      // SHORT (3.5–5.5) → a low distant band, never towering
-    const m = gradPillarMesh(w, w, 0xa6c6e2, h, 0xc6dcee);   // faint bluish → nearly dissolves into the fog/sky
+    const w = 0.24 + (i * 17 % 4) / 16;                      // VERY thin (0.24–0.43) → reads small/far
+    const h = 1.4 + (i * 23 % 4) * 0.4;                      // very SHORT (1.4–2.6) → low faint stubs, never towering
+    const m = gradPillarMesh(w, w, 0xb2d4ef, h, 0xd0e4f5);   // very faint, near sky-blue → barely-there skyline whisper
     m.castShadow = false; m.receiveShadow = false;
     g.add(m);
   }

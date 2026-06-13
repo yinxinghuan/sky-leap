@@ -14,7 +14,7 @@ import { EffectComposer } from 'three/addons/postprocessing/EffectComposer.js';
 import { RenderPass } from 'three/addons/postprocessing/RenderPass.js';
 import { UnrealBloomPass } from 'three/addons/postprocessing/UnrealBloomPass.js';
 import { OutputPass } from 'three/addons/postprocessing/OutputPass.js';
-import { platStone, platPillar, runeDisk, bgPillars, STONE_TONES } from './builders/skyruins.js?v=29';
+import { platStone, platPillar, runeDisk, bgPillars, STONE_TONES } from './builders/skyruins.js?v=31';
 import { CHARACTERS } from './builders/characters.js?v=1';
 
 // --- tunables ---------------------------------------------------------------
@@ -235,7 +235,7 @@ export function startGame({ canvas, hud }){
   const bg = bgPillars(28);
   scene.add(bg);
   const bgItems = bg.children;
-  const BG_STEP = 3.2, BG_SPAN = bgItems.length * BG_STEP;
+  const BG_STEP = 1.45, BG_SPAN = bgItems.length * BG_STEP;   // tighter band (~40u, was ~90) → far towers don't project into the upper sky
   const BG_PARALLAX = 0.7;          // <1 → drifts slower than the camera
   function layoutBg(){
     for (let i = 0; i < bgItems.length; i++){
@@ -246,7 +246,7 @@ export function startGame({ canvas, hud }){
       // (y≈0) so they read as a low, distant band, never towering pillars.
       const side = i % 4 === 0 ? -1 : 1;                 // a few on the near side, far out; most deep
       const farX = side === 1 ? 13 + (i * 13 % 20) : -(20 + (i * 11 % 12));
-      m.position.set(farX, -2.6 - (i * 7 % 4) * 0.5, (i * BG_STEP) % BG_SPAN);
+      m.position.set(farX, -8.0 - (i * 7 % 4) * 0.7, (i * BG_STEP) % BG_SPAN);  // tops pushed deep below the play line → faint low band, not sky-reaching streaks
     }
   }
   function updateBg(){
@@ -564,6 +564,7 @@ export function startGame({ canvas, hud }){
     if (state !== IDLE) return;
     state = CHARGING;
     charge = 0;
+    hero.position.y = PLAT_TOP;   // clear any idle-hop offset before the squash
     sfxChargeStart();
   }
   function chargeRelease(){
@@ -731,10 +732,18 @@ export function startGame({ canvas, hud }){
       deadTimer += dt;   // hero is shattered into particles; just count down to the card
       if (deadTimer > 0.95) finalizeDeath();
     } else if (state === IDLE){
+      // Crossy-Road perky idle: a little hop-in-place breath — stretch up at the
+      // apex (never compress below rest, so feet stay planted), arms lift on the
+      // way up, a small hop that never dips below the pad.
       idleClock += gdt;
-      const b = Math.sin(idleClock * 2.2) * 0.012;
-      hero.scale.set(1, 1 + b, 1);
-      if (rig && rigBase){ const sway = Math.sin(idleClock * 2.2) * 0.05; rig.armL.rotation.x = rigBase.armL + sway; rig.armR.rotation.x = rigBase.armR + sway; }
+      const air = Math.abs(Math.sin(idleClock * 3.2));     // 0 = grounded, 1 = apex (~1s bounces)
+      hero.position.y = PLAT_TOP + 0.07 * air;
+      hero.scale.set(1, 1 + 0.055 * air, 1);
+      if (rig && rigBase){
+        rig.armL.rotation.x = rigBase.armL - 0.16 * air;
+        rig.armR.rotation.x = rigBase.armR - 0.16 * air;
+        rig.legL.rotation.x = rigBase.legL; rig.legR.rotation.x = rigBase.legR;
+      }
     }
 
     // expanding release pulse
