@@ -1,3 +1,4 @@
-_*.jpeg
-_review/
+node_modules
+dist
+_*.py
 .DS_Store
