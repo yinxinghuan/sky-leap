@@ -21,11 +21,14 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+        with:
+          submodules: true
       - uses: actions/setup-node@v4
         with:
           node-version: 20
           cache: npm
       - run: npm ci
+      - run: ln -sf ../../node_modules src/engine-3d/node_modules
       - run: npm run build
       - uses: actions/upload-pages-artifact@v3
         with:

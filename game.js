@@ -14,8 +14,9 @@ import { EffectComposer } from 'three/addons/postprocessing/EffectComposer.js';
 import { RenderPass } from 'three/addons/postprocessing/RenderPass.js';
 import { UnrealBloomPass } from 'three/addons/postprocessing/UnrealBloomPass.js';
 import { OutputPass } from 'three/addons/postprocessing/OutputPass.js';
-import { platStone, platPillar, runeDisk, bgPillars, STONE_TONES } from './builders/skyruins.js?v=32';
-import { CHARACTERS } from './builders/characters.js?v=1';
+import { platStone, platPillar, runeDisk, bgPillars, STONE_TONES } from './builders/skyruins.js?v=33';
+import { CHARACTERS } from './builders/characters.js?v=2';
+import { P, box, cyl, ball, darken } from '@engine-3d';
 
 // --- tunables ---------------------------------------------------------------
 const CHARGE_MAX = 1.05;          // seconds to full charge

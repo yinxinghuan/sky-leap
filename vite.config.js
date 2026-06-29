@@ -3,7 +3,10 @@ import path from 'path';
 export default defineConfig({
   base: './',
   resolve: {
-    alias: { 'three/addons/': path.resolve(__dirname, 'node_modules/three/examples/jsm/') },
+    alias: {
+      'three/addons/': path.resolve(__dirname, 'node_modules/three/examples/jsm/'),
+      '@engine-3d': path.resolve(__dirname, 'src/engine-3d'),
+    },
   },
   preview: { host: '0.0.0.0', allowedHosts: true },
   server: { host: '0.0.0.0', allowedHosts: true },
