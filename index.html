@@ -372,6 +372,7 @@
 
 <script type="module">
 import { startGame } from './game.js';
+import { CARTRIDGE } from './cartridge/index.js?v=1';
 
 const $ = (s) => document.querySelector(s);
 const canvas = $('#c');
@@ -381,6 +382,21 @@ const comboEl = $('#combo');
 const popEl = $('#pop');
 const guideEl = $('#guide');
 const overEl = $('#over');
+
+function applyCartridgeCopy(){
+  const copy = CARTRIDGE.copy;
+  $('#wordmark .b').innerHTML = copy.titleHtml;
+  $('#wordmark .sub').textContent = copy.subtitle;
+  $('#guide .g-label').textContent = copy.guide;
+  $('#lbFull h2').textContent = copy.leaderboardTitle;
+  $('#lbFull .lsub').textContent = copy.leaderboardSub;
+  $('#over h1').textContent = copy.deadTitle;
+  $('#over .stat:first-child .k').textContent = copy.scoreLabel;
+  $('#over .stat.best .k').textContent = copy.bestLabel;
+  $('#again').textContent = copy.againBtn;
+  $('#overRank').textContent = copy.rankBtn;
+}
+applyCartridgeCopy();
 
 let started = false;
 let comboPopT = null;

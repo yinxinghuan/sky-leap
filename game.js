@@ -17,6 +17,7 @@ import { OutputPass } from 'three/addons/postprocessing/OutputPass.js';
 import { platStone, platPillar, runeDisk, bgPillars, STONE_TONES } from './builders/skyruins.js?v=33';
 import { CHARACTERS } from './builders/characters.js?v=2';
 import { P, box, cyl, ball, darken } from '@engine-3d';
+import { CARTRIDGE } from './cartridge/index.js?v=1';
 
 // --- tunables ---------------------------------------------------------------
 const CHARGE_MAX = 1.05;          // seconds to full charge
@@ -72,7 +73,7 @@ export function startGame({ canvas, hud }){
   renderer.toneMappingExposure = 1.0;
 
   const scene = new THREE.Scene();
-  scene.fog = new THREE.Fog(0x9cc2e6, 28, 43);   // heavy haze (no cloud layer): pillar bottoms dissolve into the background
+  scene.fog = new THREE.Fog(CARTRIDGE.fog.color, CARTRIDGE.fog.near, CARTRIDGE.fog.far);   // heavy haze (no cloud layer): pillar bottoms dissolve into the background
 
   // Orthographic 45° oblique (axonometric) — parallel lines, no vanishing point,
   // low elevation so the tall pillar front faces read (matches the reference).
@@ -87,11 +88,11 @@ export function startGame({ canvas, hud }){
     new THREE.ShaderMaterial({
       side: THREE.BackSide, depthWrite: false, fog: false,
       uniforms: {
-        top: { value: new THREE.Color(0x5aa3da) },   // deeper sky-BLUE crown
-        mid: { value: new THREE.Color(0x8cc0e8) },   // soft sky blue
-        bot: { value: new THREE.Color(0xc4e0f4) },   // pale blue horizon
-        glow: { value: new THREE.Color(0xccdd8a) },  // lime-yellow corner
-        glowDir: { value: new THREE.Vector3(-0.4, 0.72, 0.45).normalize() },   // upper-LEFT in screen space
+        top: { value: new THREE.Color(CARTRIDGE.sky.top) },
+        mid: { value: new THREE.Color(CARTRIDGE.sky.mid) },
+        bot: { value: new THREE.Color(CARTRIDGE.sky.bot) },
+        glow: { value: new THREE.Color(CARTRIDGE.sky.glow) },
+        glowDir: { value: new THREE.Vector3(...CARTRIDGE.sky.glowDir).normalize() },
       },
       vertexShader: 'varying vec3 vP; void main(){ vP = position; gl_Position = projectionMatrix * modelViewMatrix * vec4(position,1.0); }',
       fragmentShader: 'varying vec3 vP; uniform vec3 top; uniform vec3 mid; uniform vec3 bot; uniform vec3 glow; uniform vec3 glowDir; void main(){ vec3 n = normalize(vP); float h = n.y; vec3 c = h > 0.0 ? mix(mid, top, clamp(h*1.25,0.0,1.0)) : mix(mid, bot, clamp(-h*1.8,0.0,1.0)); float g = clamp(dot(n, glowDir), 0.0, 1.0); c = mix(c, glow, g*g*0.6); gl_FragColor = vec4(c,1.0); }',
@@ -100,8 +101,8 @@ export function startGame({ canvas, hud }){
   scene.add(sky);
 
   // ── Soft, even pastel lighting (low contrast, airy — no hard sun) ──
-  scene.add(new THREE.HemisphereLight(0xeef6f0, 0xf4e0d6, 0.82));  // strong flat fill (ref is near-shadowless)
-  const key = new THREE.DirectionalLight(0xfff4e8, 0.5);
+  scene.add(new THREE.HemisphereLight(CARTRIDGE.lights.hemiSky, CARTRIDGE.lights.hemiGround, CARTRIDGE.lights.hemiIntensity));  // strong flat fill (ref is near-shadowless)
+  const key = new THREE.DirectionalLight(CARTRIDGE.lights.key, CARTRIDGE.lights.keyIntensity);
   key.position.set(-7, 13, 6);     // higher + softer → gentle short shadows
   key.castShadow = true;
   key.shadow.mapSize.set(1024, 1024);
@@ -110,12 +111,12 @@ export function startGame({ canvas, hud }){
   key.shadow.camera.top = 18; key.shadow.camera.bottom = -18;
   key.shadow.bias = -0.0005;
   scene.add(key);
-  const rim = new THREE.DirectionalLight(0xdaf0ea, 0.3);
+  const rim = new THREE.DirectionalLight(CARTRIDGE.lights.rim, CARTRIDGE.lights.rimIntensity);
   rim.position.set(6, 5, -12);     // cool mint back-rim
   scene.add(rim);
 
   // ── Floating dust motes — warm, additive, catch the light (golden-hour life) ──
-  const MOTES = 150;
+  const MOTES = CARTRIDGE.motes.count;
   const mGeo = new THREE.BufferGeometry();
   const mPos = new Float32Array(MOTES * 3);
   for (let i = 0; i < MOTES; i++){
@@ -125,7 +126,7 @@ export function startGame({ canvas, hud }){
   }
   mGeo.setAttribute('position', new THREE.BufferAttribute(mPos, 3));
   const motes = new THREE.Points(mGeo, new THREE.PointsMaterial({
-    color: 0xffdca0, size: 0.09, transparent: true, opacity: 0.75,
+    color: CARTRIDGE.motes.color, size: CARTRIDGE.motes.size, transparent: true, opacity: CARTRIDGE.motes.opacity,
     blending: THREE.AdditiveBlending, depthWrite: false, sizeAttenuation: true, fog: false,
   }));
   scene.add(motes);
@@ -137,7 +138,7 @@ export function startGame({ canvas, hud }){
   //    roll. We keep it lightweight (~240 particles) so feed scrolling stays
   //    smooth on mobile. ──
   const WEATHERS = ['clear', 'rain', 'snow', 'haze'];
-  const RAIN_OP = 0.78, SNOW_OP = 0.95;
+  const RAIN_OP = CARTRIDGE.weather.rainOpacity, SNOW_OP = CARTRIDGE.weather.snowOpacity;
   const targetOp = (w) => w === 'rain' ? RAIN_OP : (w === 'snow' ? SNOW_OP : 0);
   let weather = 'clear';
   // Dynamic weather: between stable spells of WEATHER_STAY seconds, crossfade
@@ -146,8 +147,8 @@ export function startGame({ canvas, hud }){
   const WEATHER_STAY_MIN = 18, WEATHER_STAY_MAX = 34;
   const WEATHER_FADE = 2.0;
   let weatherPhase = 'stable', weatherPhaseT = 0, weatherTimer = 0, weatherNext = null;
-  let weatherFromFog = [28, 43], weatherToFog = [28, 43];
-  const weatherFogFor = (w) => w === 'haze' ? [22, 36] : [28, 43];
+  let weatherFromFog = [CARTRIDGE.fog.near, CARTRIDGE.fog.far], weatherToFog = [CARTRIDGE.fog.near, CARTRIDGE.fog.far];
+  const weatherFogFor = (w) => w === 'haze' ? [CARTRIDGE.fog.hazeNear, CARTRIDGE.fog.hazeFar] : [CARTRIDGE.fog.near, CARTRIDGE.fog.far];
   // Tight box around the hero — particles spread thin if they cover the whole
   // far-haze zone, so keep them in the foreground bubble where they'll read.
   const WX = 10, WZ = 14, WY_BOT = -2, WY_TOP = 13;
@@ -163,11 +164,11 @@ export function startGame({ canvas, hud }){
   // sizeAttenuation:false keeps the dot a fixed screen size, so rain/snow
   // doesn't shrink to invisible specks behind the camera distance.
   const rainMat = new THREE.PointsMaterial({
-    color: 0xc8d6ee, size: 3.0, transparent: true, opacity: 0.78,
+    color: CARTRIDGE.weather.rainColor, size: CARTRIDGE.weather.rainSize, transparent: true, opacity: CARTRIDGE.weather.rainOpacity,
     blending: THREE.NormalBlending, depthWrite: false, sizeAttenuation: false, fog: false,
   });
   const snowMat = new THREE.PointsMaterial({
-    color: 0xffffff, size: 5.0, transparent: true, opacity: 0.95,
+    color: CARTRIDGE.weather.snowColor, size: CARTRIDGE.weather.snowSize, transparent: true, opacity: CARTRIDGE.weather.snowOpacity,
     blending: THREE.NormalBlending, depthWrite: false, sizeAttenuation: false, fog: false,
   });
   const weatherP = new THREE.Points(wGeo, snowMat);
@@ -237,7 +238,7 @@ export function startGame({ canvas, hud }){
   // ── Bloom post-processing — the core "lavish" lever (emissives + sun glow) ──
   const composer = new EffectComposer(renderer);
   composer.addPass(new RenderPass(scene, camera));
-  const bloom = new UnrealBloomPass(new THREE.Vector2(1, 1), 0.4, 0.5, 0.85);
+  const bloom = new UnrealBloomPass(new THREE.Vector2(1, 1), CARTRIDGE.bloom.strength, CARTRIDGE.bloom.radius, CARTRIDGE.bloom.threshold);
   composer.addPass(bloom);
   composer.addPass(new OutputPass());
 
@@ -369,7 +370,7 @@ export function startGame({ canvas, hud }){
   // charge ring (ground, grows with charge)
   const ring = new THREE.Mesh(
     new THREE.RingGeometry(0.55, 0.72, 32),
-    new THREE.MeshBasicMaterial({ color: 0x3fb6ac, transparent: true, opacity: 0, side: THREE.DoubleSide })
+    new THREE.MeshBasicMaterial({ color: CARTRIDGE.uiFx.ring, transparent: true, opacity: 0, side: THREE.DoubleSide })
   );
   ring.rotation.x = -Math.PI / 2;
   ring.position.y = 0.02;
@@ -378,7 +379,7 @@ export function startGame({ canvas, hud }){
   // release pulse ring (expands outward on launch)
   const pulseRing = new THREE.Mesh(
     new THREE.RingGeometry(0.5, 0.66, 32),
-    new THREE.MeshBasicMaterial({ color: 0x9ff0e6, transparent: true, opacity: 0, side: THREE.DoubleSide })
+    new THREE.MeshBasicMaterial({ color: CARTRIDGE.uiFx.pulseRing, transparent: true, opacity: 0, side: THREE.DoubleSide })
   );
   pulseRing.rotation.x = -Math.PI / 2; pulseRing.position.y = 0.03; pulseRing.visible = false;
   scene.add(pulseRing);
@@ -391,8 +392,8 @@ export function startGame({ canvas, hud }){
     transparent: true, depthWrite: false, fog: false,
     uniforms: {
       uOpacity: { value: 1 },
-      cA: { value: new THREE.Color(0xffffff) },   // white arc (ref)
-      cB: { value: new THREE.Color(0xffffff) },
+      cA: { value: new THREE.Color(CARTRIDGE.uiFx.aimA) },
+      cB: { value: new THREE.Color(CARTRIDGE.uiFx.aimB) },
     },
     vertexShader: 'varying vec2 vUv; void main(){ vUv = uv; gl_Position = projectionMatrix * modelViewMatrix * vec4(position,1.0); }',
     fragmentShader: 'varying vec2 vUv; uniform float uOpacity; uniform vec3 cA; uniform vec3 cB; void main(){ vec3 c = mix(cA, cB, vUv.x); float a = (0.45 + 0.55 * vUv.x) * uOpacity; gl_FragColor = vec4(c, a); }',
@@ -443,7 +444,7 @@ export function startGame({ canvas, hud }){
         size: size * (0.7 + Math.random() * 0.6), life: life * (0.7 + Math.random() * 0.6), grav: 9, emissive, spin: 6 });
     }
   }
-  function puffFx(x, y, z, { count = 4, color = 0xeee7d6, size = 0.2, life = 0.5 } = {}){
+  function puffFx(x, y, z, { count = 4, color = new THREE.Color(CARTRIDGE.uiFx.puff).getHex(), size = 0.2, life = 0.5 } = {}){
     for (let i = 0; i < count; i++)
       spawnP(x, y, z, color, { vx: (Math.random() * 2 - 1) * 0.6, vy: 0.4 + Math.random() * 0.4, vz: (Math.random() * 2 - 1) * 0.6,
         size: size * (0.6 + Math.random() * 0.6), life, grav: 0.5, soft: true });
@@ -487,7 +488,7 @@ export function startGame({ canvas, hud }){
     if (AC){ if (AC.state !== 'running') AC.resume(); return; }
     const ACtor = window.AudioContext || window.webkitAudioContext; if (!ACtor) return;
     AC = new ACtor();
-    master = AC.createGain(); master.gain.value = 0.85;
+    master = AC.createGain(); master.gain.value = CARTRIDGE.audio.masterGain;
     const comp = AC.createDynamicsCompressor();
     master.connect(comp); comp.connect(AC.destination);
     // no background-music pad — SFX only
@@ -534,8 +535,8 @@ export function startGame({ canvas, hud }){
   function startAmbient(){
     if (!AC) return;
     ambGain = AC.createGain(); ambGain.gain.value = 0; ambGain.connect(master);
-    const o1 = AC.createOscillator(); o1.type = 'sine'; o1.frequency.value = 110;
-    const o2 = AC.createOscillator(); o2.type = 'sine'; o2.frequency.value = 146.8;
+    const o1 = AC.createOscillator(); o1.type = 'sine'; o1.frequency.value = CARTRIDGE.audio.ambientBase;
+    const o2 = AC.createOscillator(); o2.type = 'sine'; o2.frequency.value = CARTRIDGE.audio.ambientOctave;
     const lp = AC.createBiquadFilter(); lp.type = 'lowpass'; lp.frequency.value = 640;
     o1.connect(lp); o2.connect(lp); lp.connect(ambGain); o1.start(); o2.start();
     breathe();
@@ -640,8 +641,8 @@ export function startGame({ canvas, hud }){
   // rotating bank so consecutive jumps don't repeat the same word, and reserve
   // BARELY! for foot-on-the-edge close calls (>=85% of the footprint margin
   // hanging off the pad). PERFECT keeps its own branded shout below.
-  const GOOD_WORDS  = ['NICE!', 'SMOOTH!', 'CLEAN!', 'NEAT!', 'SLICK!'];
-  const PLAIN_WORDS = ['OKAY!', 'PHEW!', 'CLOSE!'];
+  const GOOD_WORDS  = CARTRIDGE.copy.goodWords;
+  const PLAIN_WORDS = CARTRIDGE.copy.plainWords;
   let popI = 0;
   const pickWord = (arr) => arr[(popI++) % arr.length];
   let deadTimer = 0;
@@ -730,12 +731,12 @@ export function startGame({ canvas, hud }){
       score += 3;   // 1 platform + 2 perfect bonus (monotonic)
       flashPlatform(landed, true);
       const n = 10 + Math.min(combo, 8) * 2;
-      burst(0, PLAT_TOP + 0.2, landAlong, { count: n, color: 0xf2c14e, speed: 3.2, up: 3.4, size: 0.15, life: 0.7, emissive: 1.2 });
-      burst(0, PLAT_TOP + 0.2, landAlong, { count: Math.floor(n * 0.5), color: 0x9ff0e6, speed: 2.4, up: 2.8, size: 0.12, life: 0.6, emissive: 1.0 });
+      burst(0, PLAT_TOP + 0.2, landAlong, { count: n, color: new THREE.Color(CARTRIDGE.uiFx.perfectBurst).getHex(), speed: 3.2, up: 3.4, size: 0.15, life: 0.7, emissive: 1.2 });
+      burst(0, PLAT_TOP + 0.2, landAlong, { count: Math.floor(n * 0.5), color: new THREE.Color(CARTRIDGE.uiFx.perfectSpark).getHex(), speed: 2.4, up: 2.8, size: 0.12, life: 0.6, emissive: 1.0 });
       camKick = 0.55;
       doSlow(0.42, 0.18);
       sfxPerfect(combo);
-      hud.pop(combo >= 2 ? 'PERFECT ×' + combo : 'PERFECT', 'perfect');
+      hud.pop(combo >= 2 ? CARTRIDGE.copy.comboFormat.replace('{combo}', String(combo)) : CARTRIDGE.copy.perfect, 'perfect');
     } else if (d <= eh * 0.7){
       // GOOD — keep combo, soft dust, rotating shout
       score += 1;
@@ -752,7 +753,7 @@ export function startGame({ canvas, hud }){
       sfxLand();
       const edgeMargin = landed.half + HERO_HALF;
       const isClose = d >= edgeMargin * 0.85;
-      hud.pop(isClose ? 'BARELY!' : pickWord(PLAIN_WORDS), isClose ? 'barely' : 'plain');
+      hud.pop(isClose ? CARTRIDGE.copy.barely : pickWord(PLAIN_WORDS), isClose ? 'barely' : 'plain');
     }
     hud.setScore(score);
     hud.setCombo(combo);
