@@ -52,6 +52,17 @@ export const skyRuinsCartridge = {
 
   bloom: { strength: 0.4, radius: 0.5, threshold: 0.85 },
 
+  world: {
+    stoneTones: ['#e6bcae', '#d9aeae', '#e9cbac', '#ceb2bd'],
+    pad: '#f2e6a8',
+    pillarTop: '#f2649e',
+    pillarBottom: '#f5b1c7',
+    capLip: '#c75283',
+    runeAccent: '#3fb6ac',
+    bgTop: '#b2d4ef',
+    bgBottom: '#d0e4f5',
+  },
+
   motes: { color: '#ffdca0', count: 150, opacity: 0.75, size: 0.09 },
 
   weather: {

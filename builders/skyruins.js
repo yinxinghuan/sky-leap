@@ -18,6 +18,15 @@ const PAD = 0xf2e6a8;                 // pale yellow glowing landing pad (ref)
 const PILLAR_H = 16;                  // pillars run from y=0 down to y=-16
 const PILLAR_TOP = 0xf2649e;          // vivid brand-family candy pink top
 const PILLAR_BOT = 0xf5b1c7;          // platform brand pink (#F5B1C7) bottom — whole pillar reads brand-pink
+const DEFAULT_THEME = {
+  pad: PAD,
+  pillarTop: PILLAR_TOP,
+  pillarBottom: PILLAR_BOT,
+  capLip: darken(PILLAR_TOP, 0.82),
+  runeAccent: P.accent,
+  bgTop: 0xb2d4ef,
+  bgBottom: 0xd0e4f5,
+};
 
 const clamp01 = v => Math.max(0, Math.min(1, v));
 
@@ -51,36 +60,36 @@ function gradPillarMesh(w, d, topColor = PILLAR_TOP, h = PILLAR_H, botColor = PI
 // here anymore; this module only makes the pillars + skyline.
 
 // Glowing pale landing pad inset on a pillar top. Returns it for landing-pulse.
-function padTop(g, half, w, ei = 0.05){
-  const pad = box(w * 0.62, 0.05, half * 2 * 0.62, PAD, 0, 0.02, 0, { e: PAD, ei });
+function padTop(g, half, w, theme = DEFAULT_THEME, ei = 0.05){
+  const pad = box(w * 0.62, 0.05, half * 2 * 0.62, theme.pad, 0, 0.02, 0, { e: theme.pad, ei });
   g.add(pad);
   return [pad];
 }
 
 // ── Platform: tall rooted pink→peach pillar + glowing pad (the common one). ──
-export function platStone(half, w){
+export function platStone(half, w, theme = DEFAULT_THEME){
   const g = new THREE.Group();
-  g.add(gradPillarMesh(w, half * 2));
-  g.userData.runeMeshes = padTop(g, half, w);
+  g.add(gradPillarMesh(w, half * 2, theme.pillarTop, PILLAR_H, theme.pillarBottom));
+  g.userData.runeMeshes = padTop(g, half, w, theme);
   return g;
 }
 
 // ── Platform: pillar with a darker cap lip (variety). ──
-export function platPillar(half, w){
+export function platPillar(half, w, theme = DEFAULT_THEME){
   const g = new THREE.Group();
-  g.add(gradPillarMesh(w, half * 2));
-  g.add(box(w * 1.04, 0.12, half * 2 * 1.04, darken(PILLAR_TOP, 0.82), 0, -0.06, 0)); // cap lip
-  g.userData.runeMeshes = padTop(g, half, w);
+  g.add(gradPillarMesh(w, half * 2, theme.pillarTop, PILLAR_H, theme.pillarBottom));
+  g.add(box(w * 1.04, 0.12, half * 2 * 1.04, theme.capLip, 0, -0.06, 0)); // cap lip
+  g.userData.runeMeshes = padTop(g, half, w, theme);
   return g;
 }
 
 // ── Platform: pillar with a brighter teal-hearted pad (the every-6th target). ──
-export function runeDisk(half, w){
+export function runeDisk(half, w, theme = DEFAULT_THEME){
   const g = new THREE.Group();
-  g.add(gradPillarMesh(w, half * 2));
-  const pad = box(w * 0.62, 0.05, half * 2 * 0.62, PAD, 0, 0.02, 0, { e: PAD, ei: 0.28 });
+  g.add(gradPillarMesh(w, half * 2, theme.pillarTop, PILLAR_H, theme.pillarBottom));
+  const pad = box(w * 0.62, 0.05, half * 2 * 0.62, theme.pad, 0, 0.02, 0, { e: theme.pad, ei: 0.28 });
   g.add(pad);
-  g.add(box(w * 0.24, 0.06, half * 2 * 0.24, P.accent, 0, 0.03, 0, { e: P.accent, ei: 0.55 })); // teal heart
+  g.add(box(w * 0.24, 0.06, half * 2 * 0.24, theme.runeAccent, 0, 0.03, 0, { e: theme.runeAccent, ei: 0.55 })); // teal heart
   g.userData.runeMeshes = [pad];
   return g;
 }
@@ -90,12 +99,12 @@ export function runeDisk(half, w){
 // "far" (ortho has no perspective shrink); the long bodies sink deep into the
 // fog so the bottoms dissolve and nothing floats. game.js lays them out +
 // recycles them past the hero. ──
-export function bgPillars(n = 28){
+export function bgPillars(n = 28, theme = DEFAULT_THEME){
   const g = new THREE.Group();
   for (let i = 0; i < n; i++){
     const w = 0.24 + (i * 17 % 4) / 16;                      // VERY thin (0.24–0.43) → reads small/far
     const h = 18 + (i * 23 % 6) * 3.5;                       // VERY LONG (18–35.5), staggered → long columns sinking far into the fog
-    const m = gradPillarMesh(w, w, 0xb2d4ef, h, 0xd0e4f5);   // very faint, near sky-blue → dissolves into the haze
+    const m = gradPillarMesh(w, w, theme.bgTop, h, theme.bgBottom);   // very faint → dissolves into the haze
     m.castShadow = false; m.receiveShadow = false;
     g.add(m);
   }

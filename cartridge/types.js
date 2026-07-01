@@ -13,6 +13,7 @@
  *   lights: LightColors,
  *   fog: FogColors,
  *   bloom: BloomOpts,
+ *   world: WorldTheme,
  *   motes: MotesColors,
  *   weather: WeatherTheme,
  *   uiFx: UIFxTheme,
@@ -41,6 +42,7 @@
  * @typedef {{ hemiSky: string, hemiGround: string, hemiIntensity: number, key: string, keyIntensity: number, rim: string, rimIntensity: number }} LightColors
  * @typedef {{ color: string, near: number, far: number, hazeNear: number, hazeFar: number }} FogColors
  * @typedef {{ strength: number, radius: number, threshold: number }} BloomOpts
+ * @typedef {{ stoneTones: string[], pad: string, pillarTop: string, pillarBottom: string, capLip: string, runeAccent: string, bgTop: string, bgBottom: string }} WorldTheme
  * @typedef {{ color: string, count: number, opacity: number, size: number }} MotesColors
  * @typedef {{ rainColor: string, snowColor: string, rainOpacity: number, snowOpacity: number, rainSize: number, snowSize: number }} WeatherTheme
  * @typedef {{ ring: string, pulseRing: string, perfectBurst: string, perfectSpark: string, puff: string, aimA: string, aimB: string }} UIFxTheme

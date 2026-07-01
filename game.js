@@ -14,7 +14,7 @@ import { EffectComposer } from 'three/addons/postprocessing/EffectComposer.js';
 import { RenderPass } from 'three/addons/postprocessing/RenderPass.js';
 import { UnrealBloomPass } from 'three/addons/postprocessing/UnrealBloomPass.js';
 import { OutputPass } from 'three/addons/postprocessing/OutputPass.js';
-import { platStone, platPillar, runeDisk, bgPillars, STONE_TONES } from './builders/skyruins.js?v=33';
+import { platStone, platPillar, runeDisk, bgPillars } from './builders/skyruins.js?v=33';
 import { CHARACTERS } from './builders/characters.js?v=2';
 import { P, box, cyl, ball, darken } from '@engine-3d';
 import { CARTRIDGE } from './cartridge/index.js?v=1';
@@ -80,6 +80,7 @@ export function startGame({ canvas, hud }){
   const ISO_DIR = new THREE.Vector3(-1, 0.62, -1).normalize();
   const camera = new THREE.OrthographicCamera(-VIEW, VIEW, VIEW, -VIEW, 0.1, 200);
   const camFocus = new THREE.Vector3();
+  const WORLD_THEME = CARTRIDGE.world;
 
   // ── Sky dome: soft teal-cyan vertical gradient + a lime-yellow corner glow
   // (matches the reference: lime top-left → teal-cyan body → pale mint). ──
@@ -339,7 +340,7 @@ export function startGame({ canvas, hud }){
   // distant skyline — a PARALLAX LAYER of many tiny faint towers. The whole
   // group drifts at 0.7× the camera (slower than the foreground → parallax), and
   // each tower wraps around so the band is always populated.
-  const bg = bgPillars(28);
+  const bg = bgPillars(28, WORLD_THEME);
   scene.add(bg);
   const bgItems = bg.children;
   const BG_STEP = 2.6, BG_SPAN = bgItems.length * BG_STEP;   // spread for a staggered skyline
@@ -570,15 +571,15 @@ export function startGame({ canvas, hud }){
 
   function makePlatform(idx, along, half){
     // 4-beat color motif marching toward camera
-    const tone = STONE_TONES[idx % STONE_TONES.length];
+    const tone = WORLD_THEME.stoneTones[idx % WORLD_THEME.stoneTones.length];
     let grp;
     if (idx <= WARMUP){
-      grp = platStone(half, RAIL_W, tone, idx);
+      grp = platStone(half, RAIL_W, { ...WORLD_THEME, pillarTop: tone });
     } else {
       const v = VARIANT_CYCLE[idx % VARIANT_CYCLE.length];
-      grp = v === 2 ? runeDisk(half, RAIL_W, tone)
-          : v === 1 ? platPillar(half, RAIL_W, tone, idx)
-          : platStone(half, RAIL_W, tone, idx);
+      grp = v === 2 ? runeDisk(half, RAIL_W, { ...WORLD_THEME, pillarTop: tone })
+          : v === 1 ? platPillar(half, RAIL_W, { ...WORLD_THEME, pillarTop: tone })
+          : platStone(half, RAIL_W, { ...WORLD_THEME, pillarTop: tone });
     }
     grp.position.set(0, PLAT_TOP, along);
     // deterministic alternating sway (a readable zigzag, not random wonkiness)
