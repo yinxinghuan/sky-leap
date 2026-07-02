@@ -570,8 +570,12 @@ export function startGame({ canvas, hud }){
   const VARIANT_CYCLE = [0, 0, 1, 0, 0, 2];
 
   function makePlatform(idx, along, half){
-    // 4-beat color motif marching toward camera
-    const tone = WORLD_THEME.stoneTones[idx % WORLD_THEME.stoneTones.length];
+    // Generated themes may opt into a color motif, but canonical Sky Leap keeps
+    // the original unified pillar color.
+    const tones = WORLD_THEME.stoneTones || [];
+    const tone = WORLD_THEME.varyPillarTones && tones.length
+      ? tones[idx % tones.length]
+      : WORLD_THEME.pillarTop;
     let grp;
     if (idx <= WARMUP){
       grp = platStone(half, RAIL_W, { ...WORLD_THEME, pillarTop: tone });

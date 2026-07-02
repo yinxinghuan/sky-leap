@@ -196,6 +196,7 @@ function cartridgeFor(sentence) {
     bloom: { strength: 0.46, radius: 0.56, threshold: 0.82 },
     world: {
       stoneTones: theme.stoneTones,
+      varyPillarTones: true,
       pad: theme.world[0],
       pillarTop: theme.world[1],
       pillarBottom: theme.world[2],

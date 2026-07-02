@@ -61,7 +61,7 @@ function gradPillarMesh(w, d, topColor = PILLAR_TOP, h = PILLAR_H, botColor = PI
 
 // Glowing pale landing pad inset on a pillar top. Returns it for landing-pulse.
 function padTop(g, half, w, theme = DEFAULT_THEME, ei = 0.05){
-  const pad = box(w * 0.62, 0.05, half * 2 * 0.62, theme.pad, 0, 0.02, 0, { e: theme.pad, ei });
+  const pad = box(w * 0.62, 0.045, half * 2 * 0.62, theme.pad, 0, 0.04, 0, { e: theme.pad, ei });
   g.add(pad);
   return [pad];
 }
@@ -78,7 +78,7 @@ export function platStone(half, w, theme = DEFAULT_THEME){
 export function platPillar(half, w, theme = DEFAULT_THEME){
   const g = new THREE.Group();
   g.add(gradPillarMesh(w, half * 2, theme.pillarTop, PILLAR_H, theme.pillarBottom));
-  g.add(box(w * 1.04, 0.12, half * 2 * 1.04, theme.capLip, 0, -0.06, 0)); // cap lip
+  g.add(box(w * 1.04, 0.08, half * 2 * 1.04, theme.capLip, 0, -0.06, 0)); // cap lip
   g.userData.runeMeshes = padTop(g, half, w, theme);
   return g;
 }
@@ -87,9 +87,9 @@ export function platPillar(half, w, theme = DEFAULT_THEME){
 export function runeDisk(half, w, theme = DEFAULT_THEME){
   const g = new THREE.Group();
   g.add(gradPillarMesh(w, half * 2, theme.pillarTop, PILLAR_H, theme.pillarBottom));
-  const pad = box(w * 0.62, 0.05, half * 2 * 0.62, theme.pad, 0, 0.02, 0, { e: theme.pad, ei: 0.28 });
+  const pad = box(w * 0.62, 0.045, half * 2 * 0.62, theme.pad, 0, 0.04, 0, { e: theme.pad, ei: 0.28 });
   g.add(pad);
-  g.add(box(w * 0.24, 0.06, half * 2 * 0.24, theme.runeAccent, 0, 0.03, 0, { e: theme.runeAccent, ei: 0.55 })); // teal heart
+  g.add(box(w * 0.24, 0.035, half * 2 * 0.24, theme.runeAccent, 0, 0.085, 0, { e: theme.runeAccent, ei: 0.55 })); // teal heart
   g.userData.runeMeshes = [pad];
   return g;
 }

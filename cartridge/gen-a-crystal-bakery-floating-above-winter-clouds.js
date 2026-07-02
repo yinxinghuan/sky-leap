@@ -69,6 +69,7 @@ export const genACrystalBakeryFloatingAboveWinterCloudsCartridge = {
       "#a8cfe2",
       "#c8dce8"
     ],
+    "varyPillarTones": true,
     "pad": "#ffffff",
     "pillarTop": "#8db8d4",
     "pillarBottom": "#d6eef9",
