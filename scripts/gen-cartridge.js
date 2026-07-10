@@ -8,7 +8,7 @@
 //
 //  Usage:
 //    node scripts/gen-cartridge.js --sentence "a moon forge over violet clouds"
-//    node scripts/gen-cartridge.js --sentence "..." --activate
+//    node scripts/gen-cartridge.js --sentence "..." --no-activate
 //    node scripts/gen-cartridge.js --sentence "..." --dry-run
 // ============================================================================
 
@@ -22,14 +22,15 @@ const CARTRIDGE_DIR = path.join(ROOT, 'cartridge');
 const INDEX_PATH = path.join(CARTRIDGE_DIR, 'index.js');
 
 function parseArgs(argv) {
-  const args = { sentence: '', activate: false, dryRun: false };
+  const args = { sentence: '', activate: true, dryRun: false };
   for (let i = 0; i < argv.length; i++) {
     if (argv[i] === '--sentence' && argv[i + 1]) args.sentence = argv[++i];
     else if (argv[i] === '--activate') args.activate = true;
+    else if (argv[i] === '--no-activate') args.activate = false;
     else if (argv[i] === '--dry-run') args.dryRun = true;
   }
   if (!args.sentence) {
-    console.error('Usage: node scripts/gen-cartridge.js --sentence "a sky theme" [--activate] [--dry-run]');
+    console.error('Usage: node scripts/gen-cartridge.js --sentence "a sky theme" [--no-activate] [--dry-run]');
     process.exit(1);
   }
   return args;
