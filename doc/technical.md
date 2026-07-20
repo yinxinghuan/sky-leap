@@ -2,59 +2,32 @@
 
 ## 1. 技术栈
 
-- 游戏：Sky Leap
-- 类型：action
-- 简述：AlterU action 系列 · 梦幻天空蓄力跳。按住蓄力、松手沿抛物线跃上下一根悬空粉柱，落正中心连击金光，踩空坠入云海。低多边形正交视角 + 多角色英雄 + 磨砂玻璃 UI，单手单键即点即玩。距离排行榜。
-- 框架 / 语言 / 构建：TypeScript, Vite, Three.js
-- 渲染方式：Canvas/WebGL
-- 依赖摘录：three@0.160.0, vite@^5.1.0
-- 平台元信息：meta.title=Sky Leap；cover_url=/poster.png；category=action；uuid=eefd9179-7b36-4440-8b73-0cb1ea4e153e
+- JavaScript ES modules、Vite 5 与 Three.js 0.160.0。
+- Canvas/WebGL 渲染低多边形等距场景；HTML/CSS 负责 HUD、结算、排行榜和角色商店。
+- `vite.config.js` 使用 `base: './'`，因此构建产物可部署在任意子路径。
+- Aigram bridge 提供按游戏 UUID 隔离的排行榜、资料页打开和分数超越通知；本地 `localStorage` 保存最高分及角色收藏。
 
 ## 2. 目录结构
 
-- `index.html`：Vite/浏览器入口，挂载根节点和基础 meta。
-- `vite.config.js`：配置构建、插件和相对路径 base。
-- `package.json`：定义 npm 脚本、依赖和工程名称。
-- `meta.json`：平台发布元信息，包含标题和封面。
-- `src/engine-3d/prims.js`：游戏源码模块。
-- `src/engine-3d/office.js`：游戏源码模块。
-- `src/engine-3d/index.js`：游戏源码模块。
-- `src/engine-3d/archetypes.js`：游戏源码模块。
-- `src/engine-3d/audio.js`：游戏源码模块。
-- `src/engine-3d/characters-base.js`：游戏源码模块。
-- `src/engine-3d/hero.js`：游戏源码模块。
-- `src/engine-3d/camera.js`：游戏源码模块。
-- `src/engine-3d/particles.js`：游戏源码模块。
-- `src/engine-3d/monsters.js`：游戏源码模块。
-
-关键源码模块：
-
-- `src/engine-3d/prims.js`
-- `src/engine-3d/office.js`
-- `src/engine-3d/index.js`
-- `src/engine-3d/archetypes.js`
-- `src/engine-3d/audio.js`
-- `src/engine-3d/characters-base.js`
-- `src/engine-3d/hero.js`
-- `src/engine-3d/camera.js`
-- `src/engine-3d/particles.js`
-- `src/engine-3d/monsters.js`
+- `index.html`：页面入口、HUD、角色商店、车票收藏状态、离屏 Three.js 角色缩略渲染和 Aigram 排行榜 UI。
+- `game.js`：Three.js 场景、跳跃物理、命中判定、音效、角色实例替换和分数提交。
+- `builders/characters.js`：合并角色模型，并导出六位可收藏角色的 `CHARACTER_CATALOG` 元数据。
+- `src/engine-3d/characters-base.js`、`archetypes.js`、`monsters.js`：可复用的方块角色模型与骨骼摆动数据。
+- `cartridge/`：天空主题、场景色彩与运行文案配置。
+- `doc/requirements.md`、`doc/visual.md`、`doc/technical.md`：产品、视觉和实现说明。
 
 ## 3. 核心模块
 
-- 状态管理与主循环：通过模块级状态、对象引用和 `requestAnimationFrame` 推进游戏帧。
-- 渲染方式：Canvas/WebGL，样式由 CSS/Less 和组件结构共同完成。
-- 碰撞 / 更新：源码包含命中、距离、边界或重叠判断，结果会影响得分、生命或阶段。
-- 音频：包含程序化音频或音频文件播放，按交互事件触发。
-- 多语言：包含 i18n / locale 检测或 `t()` 文案函数。
-- 存储：使用 localStorage、useGameSave 或 persist 保存分数、收藏、墙数据或本地状态。
-- Aigram 运行时：接入 `@shared/runtime` 或平台桥接能力，用于用户、资料页、分享、通知或平台 API。
-- 排行榜：源码包含分数提交、排名或榜单展示逻辑。
+- 主循环：`game.js` 以 `requestAnimationFrame` 更新蓄力、抛物线、镜头、天气、粒子和 WebGL 合成器；DOM 只在分数、连击和结算变化时更新。
+- 角色选择：`startGame({ selectedCharacter })` 接收已装备角色；`setCharacter()` 只接受 `CHARACTER_CATALOG` 中的 key，并且在待机/结算时立刻重建角色网格。`reset()` 始终重用当前装备，不再随机抽取角色。
+- 收藏存档：`index.html` 的 `sl.collection.v1` 保存 `{ tickets, unlocked, equipped }`。初始角色为 `shopkeeper`；结算时 `awardTickets()` 按分数增加 1–8 张车票；购买成功后立即写回并装备。`thumbFor()` 以同一 `CHARACTERS` 模型、Three.js 灯光和透视相机生成并缓存透明 PNG，让锁定角色在购买前可完整预览。
+- 交互隔离：全局 Pointer 事件在角色商店、收藏入口和排行榜上直接返回，避免 UI 点击误触蓄力。商店内卡片使用 Click，底部抽屉内部可滚动。
+- 平台：`public/aigram-bridge.js` 的排行榜 API 仍在死亡时提交分数；HTML 内保留冠军入口、榜单和 `score_beat` 通知流程。
 
 ## 4. 扩展点
 
-- 改玩法参数：优先查找 `src/` 内大写常量、hooks、主组件顶部配置或关卡数组。
-- 换素材：替换 `public/`、`src/img/` 或源码 import 的图片/音频文件，并保持相对路径。
-- 调视觉：修改主样式文件中的颜色、间距、动画时长、网格尺寸和响应式规则。
-- 改文案：修改 i18n 字典、组件内标题按钮文案，保持 zh/en 同步。
-- 加平台能力：在已有 `@shared/runtime`、useGameSave、排行榜、墙或通知调用附近扩展，避免另起一套存储。
+- 增减角色或调整价格：编辑 `builders/characters.js` 中的 `CHARACTER_CATALOG`；key 必须存在于 `CHARACTERS`。
+- 调整车票产出与解锁节奏：编辑 `index.html` 的 `awardTickets()` 和 `CHARACTER_CATALOG.cost`。
+- 调整跳跃手感、得分与判定：编辑 `game.js` 顶部常量、`judgeLanding()` 与 `jumpDist()`。
+- 调整商店视觉、响应式布局或状态：编辑 `index.html` 中 `#shop`、`.character-card` 和相关 CSS 变量，并同步更新 `doc/visual.md`。
+- 调整云海、站台和文案：编辑 `cartridge/`；替换角色模型则编辑 `src/engine-3d/` 下的模型构建器。

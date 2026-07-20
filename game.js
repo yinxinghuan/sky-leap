@@ -15,7 +15,7 @@ import { RenderPass } from 'three/addons/postprocessing/RenderPass.js';
 import { UnrealBloomPass } from 'three/addons/postprocessing/UnrealBloomPass.js';
 import { OutputPass } from 'three/addons/postprocessing/OutputPass.js';
 import { platStone, platPillar, runeDisk, bgPillars } from './builders/skyruins.js?v=33';
-import { CHARACTERS } from './builders/characters.js?v=2';
+import { CHARACTERS, CHARACTER_CATALOG } from './builders/characters.js?v=3';
 import { P, box, cyl, ball, darken } from '@engine-3d';
 import { CARTRIDGE } from './cartridge/index.js?v=1';
 
@@ -64,7 +64,7 @@ const rand = (a, b) => a + Math.random() * (b - a);
 function jumpDist(c){ return MIN_DIST + (MAX_DIST - MIN_DIST) * easeInQuad(c); }
 function arcHeight(c){ return BASE_H + c * PEAK_H; }
 
-export function startGame({ canvas, hud }){
+export function startGame({ canvas, hud, selectedCharacter = 'shopkeeper' }){
   const renderer = new THREE.WebGLRenderer({ canvas, antialias: true });
   renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
   renderer.shadowMap.enabled = true;
@@ -255,18 +255,15 @@ export function startGame({ canvas, hud }){
   window.addEventListener('resize', resize);
   resize();
 
-  // ── Multi-character hero — reuse the convenience-store roster (each already
+  // ── Multi-character hero — the player equips a collected commuter. Unlike
   // carries a legL/legR/armL/armR rig). The character is wrapped in
   //   root (world pos + squash) → flip (somersault pivot) → model (the person)
   // so the existing jump code drives root.scale / flip.rotation unchanged, and
-  // the rig limbs animate through the leap. A fresh character is rolled each run
-  // (instant variety, no pre-game pick — stays true to the scroll-feed rule). ──
-  // Full library: 14 base townsfolk + 10 profession/pop-culture archetypes + 6 monsters.
-  // Derived from CHARACTERS so the roster auto-tracks the library (every builder carries a rig).
-  const ROSTER = Object.keys(CHARACTERS);
+  // the rig limbs animate through the leap. The shop owns progression; this
+  // renderer only receives a valid equipped key and never randomizes it. ──
+  const COLLECTIBLE_KEYS = new Set(CHARACTER_CATALOG.map(character => character.key));
   const HERO_SCALE = 0.76;
-  let charIdx = Math.floor(Math.random() * ROSTER.length);
-  function pickChar(){ charIdx = (charIdx + 1) % ROSTER.length; return ROSTER[charIdx]; }
+  let activeCharKey = COLLECTIBLE_KEYS.has(selectedCharacter) ? selectedCharacter : 'shopkeeper';
 
   let hero = null, rig = null, rigBase = null;
   function buildHeroMesh(charKey){
@@ -296,7 +293,7 @@ export function startGame({ canvas, hud }){
       armL: rig.armL.rotation.x, armR: rig.armR.rotation.x,
     } : null;
   }
-  setHero(ROSTER[charIdx]);
+  setHero(activeCharKey);
   const smooth = u => u * u * (3 - 2 * u);
   // piecewise track: keys = [[t,val],...] ascending, smooth-stepped between.
   function track(t, keys){
@@ -663,7 +660,7 @@ export function startGame({ canvas, hud }){
     current = plats[0];
     while (plats[plats.length - 1].idx < AHEAD) spawnNext();
     score = 0; combo = 0; charge = 0; state = IDLE;
-    setHero(pickChar());                   // roll a fresh convenience-store character each run
+    setHero(activeCharKey);                // keep the player's equipped character across runs
     // Always open on a calm clear sky; the ticker rolls in weather over time.
     setWeather('clear');
     weatherPhase = 'stable'; weatherPhaseT = 0; weatherNext = null;
@@ -938,5 +935,16 @@ export function startGame({ canvas, hud }){
     testLeap(ms){ chargeStart(); charge = (ms / 1000); chargeRelease(); },
   };
 
-  return { chargeStart, chargeRelease, restart };
+  function setCharacter(charKey){
+    if (!COLLECTIBLE_KEYS.has(charKey)) return false;
+    activeCharKey = charKey;
+    if (state === IDLE || state === DEAD) {
+      setHero(activeCharKey);
+      hero.position.set(0, PLAT_TOP, current.along);
+      restPose();
+    }
+    return true;
+  }
+
+  return { chargeStart, chargeRelease, restart, setCharacter };
 }

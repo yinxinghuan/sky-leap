@@ -156,6 +156,62 @@
     100%    { transform:scale(2.4); opacity:0; }
   }
 
+  /* ── Collection entry + ticket wallet ── */
+  #collectionEntry {
+    position:fixed; left:12px; top:max(16px,calc(env(safe-area-inset-top) + 8px)); z-index:7;
+    display:flex; align-items:center; gap:8px; min-height:44px; padding:5px 12px 5px 6px;
+    border:1px solid var(--glass-border); border-radius:999px; color:var(--ink); background:var(--glass);
+    -webkit-backdrop-filter:var(--blur); backdrop-filter:var(--blur); box-shadow:0 8px 20px rgba(58,76,128,.2);
+    font:600 13px/1 var(--font); cursor:pointer; transition:transform .15s ease, opacity .25s ease;
+  }
+  #collectionEntry:active { transform:scale(.96); }
+  #collectionEntry.playing { opacity:0; pointer-events:none; }
+  .collection-avatar { width:32px; height:32px; display:grid; place-items:center; border-radius:10px; background:var(--avatar-tone,#75b8dd); color:#fff; box-shadow:inset 0 1px 0 rgba(255,255,255,.48); font-size:18px; }
+  .collection-copy { display:flex; flex-direction:column; gap:2px; text-align:left; }
+  .collection-copy small { color:var(--ink-soft); font-size:10px; letter-spacing:.08em; }
+  #ticketWallet { font-variant-numeric:tabular-nums; color:var(--pink-deep); }
+
+  /* ── Character shop: a compact subway-platform roster, not a randomizer ── */
+  #shop { position:fixed; inset:0; z-index:45; display:none; align-items:flex-end; justify-content:center;
+    padding:max(16px,env(safe-area-inset-top)) 12px max(12px,env(safe-area-inset-bottom)); background:rgba(38,28,62,.48); -webkit-backdrop-filter:blur(5px); backdrop-filter:blur(5px); }
+  #shop.show { display:flex; animation:sl-fade .22s ease; }
+  .shop-sheet { width:min(520px,100%); max-height:min(780px,92dvh); display:flex; flex-direction:column; overflow:hidden; border-radius:28px 28px 22px 22px; color:var(--ink); background:var(--glass-strong); border:1px solid var(--glass-border); box-shadow:0 24px 60px rgba(33,25,60,.34); animation:sl-rise .3s cubic-bezier(.2,1.1,.4,1); }
+  .shop-head { padding:19px 18px 14px; display:flex; align-items:center; justify-content:space-between; border-bottom:1px solid rgba(58,44,82,.1); }
+  .shop-eyebrow { margin:0 0 4px; color:var(--ink-soft); font-size:11px; font-weight:700; letter-spacing:.15em; }
+  .shop-head h2 { margin:0; font-size:27px; line-height:1; }
+  .shop-wallet { display:flex; align-items:center; gap:6px; padding:9px 11px; border-radius:12px; background:rgba(255,255,255,.65); color:var(--pink-deep); font-weight:700; }
+  .shop-wallet svg { width:18px; height:18px; fill:var(--gold); stroke:#bd7e20; stroke-width:1.5; }
+  .shop-note { margin:0; padding:12px 18px; color:var(--ink-soft); font-size:13px; line-height:1.45; }
+  .collection-avatar svg { width:72%; height:72%; fill:currentColor; }
+  .shop-stage { position:relative; height:min(350px,42dvh); min-height:230px; overflow:hidden; border-top:1px solid rgba(255,255,255,.72); border-bottom:4px solid var(--shop-tone,#75b8dd); background:radial-gradient(circle at 50% 30%,rgba(255,255,255,.92),rgba(255,255,255,.4) 57%,rgba(111,213,191,.13)); }
+  .shop-stage::after { content:""; position:absolute; left:50%; bottom:23px; width:136px; height:20px; transform:translateX(-50%); border:2px solid rgba(58,44,82,.7); border-radius:50%; background:rgba(255,255,255,.8); box-shadow:0 7px 0 rgba(58,44,82,.15); }
+  .shop-preview { position:absolute; bottom:34px; width:68%; height:84%; object-fit:contain; filter:drop-shadow(0 11px 8px rgba(58,44,82,.22)); transition:opacity .18s ease, transform .18s ease; }
+  .shop-preview--main { left:16%; z-index:2; }
+  .shop-preview--side { width:38%; height:54%; bottom:43px; opacity:.62; filter:grayscale(.12) drop-shadow(0 7px 6px rgba(58,44,82,.15)); }
+  #shopPrev { left:-19%; transform:rotateY(20deg); } #shopNext { right:-19%; transform:rotateY(-20deg); }
+  .shop-step { position:absolute; z-index:4; top:50%; width:52px; height:52px; transform:translateY(-50%); display:grid; place-items:center; border:3px solid var(--ink); border-radius:50%; background:#fffdf6; color:var(--ink); box-shadow:3px 3px 0 rgba(58,44,82,.28); cursor:pointer; }
+  .shop-step:active { transform:translateY(-50%) translate(2px,2px); box-shadow:1px 1px 0 rgba(58,44,82,.28); }
+  .shop-step svg { width:25px; height:25px; fill:none; stroke:currentColor; stroke-width:2.4; stroke-linecap:round; stroke-linejoin:round; }
+  #shopPrevBtn { left:12px; } #shopNextBtn { right:12px; }
+  .shop-count { position:absolute; z-index:4; right:13px; bottom:12px; padding:5px 8px; border-radius:999px; color:#fff; background:var(--ink); font-size:12px; font-weight:700; font-variant-numeric:tabular-nums; }
+  .shop-identity { padding:11px 18px 8px; text-align:left; }
+  .shop-tier { margin:0 0 2px; color:var(--pink-deep); font-size:10px; font-weight:700; letter-spacing:.12em; }
+  .shop-name-line { display:flex; align-items:baseline; justify-content:space-between; gap:10px; }
+  .shop-name-line strong { font-size:26px; line-height:1.1; } .shop-name-line small { color:var(--ink-soft); font-size:12px; white-space:nowrap; }
+  .shop-state { display:inline-flex; align-items:center; gap:4px; margin-top:5px; min-height:25px; padding:3px 8px; border:1px solid rgba(58,44,82,.24); border-radius:999px; color:var(--ink-soft); font-size:12px; font-weight:700; }
+  .shop-state.owned { border-color:#2c9c72; color:#177150; } .shop-state.locked { color:var(--ink); background:rgba(255,207,77,.22); }
+  .shop-state svg, .shop-action svg { width:15px; height:15px; fill:var(--gold); stroke:#bd7e20; stroke-width:1.5; }
+  .shop-rail { display:flex; justify-content:center; gap:5px; padding:0 18px 10px; } .shop-rail i { width:18px; height:3px; border-radius:99px; background:#d7cfbf; } .shop-rail i.active { width:28px; background:var(--shop-tone,#75b8dd); } .shop-rail i.owned { background:#74cdb1; }
+  .shop-action { min-height:52px; margin:0 14px 10px; display:flex; align-items:center; justify-content:center; gap:7px; border:3px solid var(--ink); border-radius:999px; color:var(--ink); background:var(--gold); box-shadow:3px 3px 0 rgba(58,44,82,.28); font:700 18px var(--font); cursor:pointer; }
+  .shop-action.equipped { color:#887f6b; background:#ded6c7; } .shop-action:disabled { cursor:default; opacity:.78; }
+  .shop-close { min-height:48px; margin:0 14px 14px; border:1px solid rgba(255,255,255,.76); border-radius:999px; color:var(--ink); background:rgba(255,255,255,.58); font:600 16px var(--font); cursor:pointer; }
+  @media (max-height:620px) {
+    #shop { padding:7px 12px; } .shop-head { padding:11px 14px 9px; } .shop-head h2 { font-size:24px; }
+    .shop-note { padding:7px 14px; font-size:12px; } .shop-stage { height:200px; min-height:190px; }
+    .shop-identity { padding:7px 14px 4px; } .shop-name-line strong { font-size:23px; } .shop-state { margin-top:3px; min-height:22px; }
+    .shop-rail { padding:0 14px 6px; } .shop-action { min-height:45px; margin:0 14px 7px; font-size:16px; } .shop-close { min-height:38px; margin:0 14px 8px; }
+  }
+
   /* ── Game over card — frosted glass ── */
   #over {
     position:fixed; inset:0; display:none;
@@ -279,7 +335,8 @@
     display:flex; flex-direction:column; align-items:center; justify-content:center;
     gap:12px; padding:34px 18px 38px; text-align:center; color:var(--ink,#fff);
   }
-  .lb-download-state .ico { font-size:34px; line-height:1; }
+  .lb-download-state .ico { width:34px; height:34px; line-height:1; }
+  .lb-download-state .ico svg { width:100%; height:100%; fill:var(--gold); stroke:#bd7e20; stroke-width:1.2; }
   .lb-download-state .txt { max-width:260px; font-size:14px; line-height:1.45; opacity:.72; }
   .lb-download-state .btn {
     display:inline-flex; align-items:center; justify-content:center; min-height:40px;
@@ -345,6 +402,29 @@
     <div class="g-label">Hold to charge</div>
   </div>
   <div id="lb"></div>
+  <button id="collectionEntry" type="button" aria-label="Open character collection">
+    <span class="collection-avatar" aria-hidden="true">●</span>
+    <span class="collection-copy"><span>角色收藏</span><small><span id="ticketWallet">0</span> 张车票</small></span>
+  </button>
+</div>
+
+<div id="shop" aria-hidden="true">
+  <section class="shop-sheet" role="dialog" aria-modal="true" aria-labelledby="shopTitle">
+    <header class="shop-head"><div><p class="shop-eyebrow">SKY LEAP COLLECTION</p><h2 id="shopTitle">通勤者衣柜</h2></div><div class="shop-wallet" aria-label="Tickets"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 7a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2v3a2 2 0 0 0 0 4v3a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-3a2 2 0 0 0 0-4V7Z"/></svg><span id="shopTickets">0</span></div></header>
+    <p class="shop-note">每局结束获得车票。先看看他们的样子，再决定带谁跳向下一站。</p>
+    <div id="shopStage" class="shop-stage">
+      <img id="shopPrev" class="shop-preview shop-preview--side" alt="" draggable="false" />
+      <img id="shopPreview" class="shop-preview shop-preview--main" alt="" draggable="false" />
+      <img id="shopNext" class="shop-preview shop-preview--side" alt="" draggable="false" />
+      <button id="shopPrevBtn" class="shop-step" type="button" aria-label="上一位角色"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m14 5-7 7 7 7"/></svg></button>
+      <button id="shopNextBtn" class="shop-step" type="button" aria-label="下一位角色"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m10 5 7 7-7 7"/></svg></button>
+      <span id="shopCount" class="shop-count">1 / 6</span>
+    </div>
+    <div class="shop-identity"><p id="shopTier" class="shop-tier"></p><div class="shop-name-line"><strong id="shopName"></strong><small id="shopEnglish"></small></div><span id="shopState" class="shop-state"></span></div>
+    <div id="shopRail" class="shop-rail" aria-hidden="true"></div>
+    <button id="shopAction" class="shop-action" type="button"></button>
+    <button id="shopClose" class="shop-close" type="button">继续跳</button>
+  </section>
 </div>
 
 <div id="lbFull">
@@ -365,6 +445,7 @@
     </div>
     <div class="btns">
       <button class="btn-cta" id="again">Leap again</button>
+      <button class="btn-ghost" id="overShop">Character collection</button>
       <button class="btn-ghost" id="overRank">View ranking</button>
     </div>
   </div>
@@ -373,6 +454,8 @@
 <script type="module">
 import { startGame } from './game.js';
 import { CARTRIDGE } from './cartridge/index.js?v=1';
+import * as THREE from 'three';
+import { CHARACTERS, CHARACTER_CATALOG } from './builders/characters.js?v=3';
 
 const $ = (s) => document.querySelector(s);
 const canvas = $('#c');
@@ -382,6 +465,104 @@ const comboEl = $('#combo');
 const popEl = $('#pop');
 const guideEl = $('#guide');
 const overEl = $('#over');
+
+const COLLECTION_KEY = 'sl.collection.v1';
+const TICKET_ICON = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 7a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2v3a2 2 0 0 0 0 4v3a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-3a2 2 0 0 0 0-4V7Z"/></svg>';
+const GLYPHS = {
+  shopkeeper: 'M12 3a4 4 0 0 0-4 4v2h8V7a4 4 0 0 0-4-4Zm-6 8h12v9H6z',
+  student: 'M3 8 12 3l9 5-9 5-9-5Zm5 6h8v5H8z', chef: 'M12 3c-4 0-6 3-5 6h10c1-3-1-6-5-6Zm-5 8h10v10H7z',
+  delivery: 'M4 5h11v11H4zM15 8h3l2 3v5h-5zM7 18a2 2 0 1 0 0 4 2 2 0 0 0 0-4Zm10 0a2 2 0 1 0 0 4 2 2 0 0 0 0-4Z',
+  firefighter: 'M12 2c2 2 5 3 5 7a5 5 0 0 1-10 0c0-2 1-4 3-6 0 2 1 3 2 4 1-1 1-3 0-5Zm-5 13h10v7H7z',
+  ghost: 'M5 20V9a7 7 0 0 1 14 0v11l-3-2-2 2-2-2-2 2-2-2-3 2Zm4-10h2v2H9zm4 0h2v2h-2z',
+};
+function readCollection(){
+  try {
+    const saved = JSON.parse(localStorage.getItem(COLLECTION_KEY) || 'null');
+    const validKeys = new Set(CHARACTER_CATALOG.map(c => c.key));
+    if (saved && Array.isArray(saved.unlocked)) return {
+      tickets: Math.max(0, Number(saved.tickets) || 0),
+      unlocked: [...new Set(saved.unlocked.filter(key => validKeys.has(key)))].concat(saved.unlocked.includes('shopkeeper') ? [] : ['shopkeeper']),
+      equipped: validKeys.has(saved.equipped) && saved.unlocked.includes(saved.equipped) ? saved.equipped : 'shopkeeper',
+    };
+  } catch (e) { /* reset corrupt local collection */ }
+  return { tickets: 0, unlocked: ['shopkeeper'], equipped: 'shopkeeper' };
+}
+let collection = readCollection();
+function saveCollection(){ try { localStorage.setItem(COLLECTION_KEY, JSON.stringify(collection)); } catch (e) {} }
+function characterGlyph(key){ return `<svg viewBox="0 0 24 24" aria-hidden="true"><path d="${GLYPHS[key] || GLYPHS.shopkeeper}"/></svg>`; }
+let previewIndex = Math.max(0, CHARACTER_CATALOG.findIndex(character => character.key === collection.equipped));
+let previewRenderer = null;
+const previewThumbs = new Map();
+function thumbFor(character){
+  if (previewThumbs.has(character.key)) return previewThumbs.get(character.key);
+  if (!previewRenderer) {
+    previewRenderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
+    previewRenderer.setSize(420, 420); previewRenderer.setClearColor(0x000000, 0);
+  }
+  const scene = new THREE.Scene();
+  scene.add(new THREE.HemisphereLight(0xffffff, 0x846e9b, 1.15));
+  const key = new THREE.DirectionalLight(0xffffff, 1.45); key.position.set(4, 7, 6); scene.add(key);
+  const rim = new THREE.DirectionalLight(new THREE.Color(character.tone), 0.78); rim.position.set(-4, 4, -5); scene.add(rim);
+  const model = (CHARACTERS[character.key] || CHARACTERS.shopkeeper)();
+  scene.add(model);
+  const bounds = new THREE.Box3().setFromObject(model);
+  const size = bounds.getSize(new THREE.Vector3()); const center = bounds.getCenter(new THREE.Vector3());
+  model.position.sub(center); model.position.y -= bounds.min.y - center.y;
+  const maxDimension = Math.max(size.x, size.y, size.z);
+  const camera = new THREE.PerspectiveCamera(27, 1, 0.1, 100);
+  const distance = (maxDimension / (2 * Math.tan(THREE.MathUtils.degToRad(camera.fov / 2))) * 1.24);
+  camera.position.set(distance * 0.54, distance * 0.24, distance); camera.lookAt(0, size.y * 0.38, 0);
+  previewRenderer.render(scene, camera);
+  const url = previewRenderer.domElement.toDataURL('image/png');
+  scene.remove(model); model.traverse(object => { if (!object.isMesh) return; object.geometry?.dispose(); const material = object.material; if (Array.isArray(material)) material.forEach(item => item.dispose?.()); else material?.dispose?.(); });
+  previewThumbs.set(character.key, url); return url;
+}
+function renderCollection(){
+  const equipped = CHARACTER_CATALOG.find(c => c.key === collection.equipped) || CHARACTER_CATALOG[0];
+  const preview = CHARACTER_CATALOG[previewIndex] || equipped;
+  const previous = CHARACTER_CATALOG[(previewIndex - 1 + CHARACTER_CATALOG.length) % CHARACTER_CATALOG.length];
+  const next = CHARACTER_CATALOG[(previewIndex + 1) % CHARACTER_CATALOG.length];
+  const unlocked = collection.unlocked.includes(preview.key);
+  const selected = collection.equipped === preview.key;
+  $('#ticketWallet').textContent = String(collection.tickets);
+  $('#shopTickets').textContent = String(collection.tickets);
+  const entryAvatar = $('#collectionEntry .collection-avatar');
+  entryAvatar.style.setProperty('--avatar-tone', equipped.tone);
+  entryAvatar.innerHTML = characterGlyph(equipped.key);
+  $('#shopStage').style.setProperty('--shop-tone', preview.tone);
+  $('#shopPreview').src = thumbFor(preview); $('#shopPreview').alt = `${preview.name} 角色预览`;
+  $('#shopPrev').src = thumbFor(previous); $('#shopNext').src = thumbFor(next);
+  $('#shopCount').textContent = `${previewIndex + 1} / ${CHARACTER_CATALOG.length}`;
+  $('#shopTier').textContent = preview.tier;
+  $('#shopName').textContent = preview.name; $('#shopEnglish').textContent = preview.en;
+  const state = $('#shopState'); state.className = 'shop-state ' + (unlocked ? 'owned' : 'locked');
+  state.innerHTML = selected ? '使用中' : unlocked ? '已拥有 · 可装备' : `${TICKET_ICON} 解锁需要 ${preview.cost} 张车票`;
+  const rail = $('#shopRail'); rail.innerHTML = CHARACTER_CATALOG.map((character, index) => `<i class="${index === previewIndex ? 'active' : collection.unlocked.includes(character.key) ? 'owned' : ''}"></i>`).join('');
+  const action = $('#shopAction'); action.className = 'shop-action' + (selected ? ' equipped' : '');
+  action.disabled = selected || (!unlocked && collection.tickets < preview.cost);
+  action.innerHTML = selected ? '正在使用' : unlocked ? '装备这位角色' : collection.tickets < preview.cost ? `还差 ${preview.cost - collection.tickets} 张车票` : `${TICKET_ICON} 解锁角色 · ${preview.cost}`;
+}
+function selectCharacter(character){
+  const unlocked = collection.unlocked.includes(character.key);
+  if (!unlocked) {
+    if (collection.tickets < character.cost) return;
+    collection = { ...collection, tickets: collection.tickets - character.cost, unlocked: [...collection.unlocked, character.key] };
+  }
+  collection = { ...collection, equipped: character.key };
+  saveCollection(); renderCollection(); api.setCharacter(character.key);
+}
+function movePreview(direction){ previewIndex = (previewIndex + direction + CHARACTER_CATALOG.length) % CHARACTER_CATALOG.length; renderCollection(); }
+function awardTickets(score){
+  const earned = Math.max(1, Math.min(8, Math.floor(score / 4) + 1));
+  collection = { ...collection, tickets: collection.tickets + earned };
+  saveCollection(); renderCollection();
+  return earned;
+}
+function openShop(){
+  renderCollection(); $('#shop').classList.add('show'); $('#shop').setAttribute('aria-hidden', 'false');
+}
+function closeShop(){ $('#shop').classList.remove('show'); $('#shop').setAttribute('aria-hidden', 'true'); }
+renderCollection();
 
 function applyCartridgeCopy(){
   const copy = CARTRIDGE.copy;
@@ -455,6 +636,11 @@ const hud = {
     }
     $('#finalScore').textContent = String(payload.score);
     $('#finalBest').textContent = String(payload.best);
+    const earned = awardTickets(payload.score);
+    const oldReward = $('#runReward');
+    if (oldReward) oldReward.remove();
+    const reward = document.createElement('p'); reward.id = 'runReward'; reward.className = 'shop-note'; reward.textContent = `本局获得 ${earned} 张车票 · 再跳几步，解锁下一位通勤者`;
+    $('#over .btns').before(reward);
     overEl.classList.add('show');
     trySendBeatNotify(payload.score);
     setTimeout(refreshLB, 1200);
@@ -470,12 +656,19 @@ const hud = {
   },
 };
 
-const api = startGame({ canvas, hud });
+const api = startGame({ canvas, hud, selectedCharacter: collection.equipped });
+
+$('#collectionEntry').addEventListener('click', openShop);
+$('#shopClose').addEventListener('click', closeShop);
+$('#shop').addEventListener('click', (event) => { if (event.target === $('#shop')) closeShop(); });
+$('#shopPrevBtn').addEventListener('click', () => movePreview(-1));
+$('#shopNextBtn').addEventListener('click', () => movePreview(1));
+$('#shopAction').addEventListener('click', () => selectCharacter(CHARACTER_CATALOG[previewIndex]));
 
 // ── Charge input — hold anywhere to charge, release to leap ──
 addEventListener('pointerdown', (e) => {
   if (overEl.classList.contains('show')) return;
-  if (e.target.closest('#lb, #lbFull')) return;   // let leaderboard taps through
+  if (e.target.closest('#lb, #lbFull, #collectionEntry, #shop')) return;   // let overlays receive taps
   enterPlay();
   api.chargeStart();
 }, { passive:true });
@@ -483,6 +676,7 @@ addEventListener('pointerup', () => api.chargeRelease(), { passive:true });
 addEventListener('pointercancel', () => api.chargeRelease(), { passive:true });
 
 $('#again').addEventListener('click', () => api.restart());
+$('#overShop').addEventListener('click', openShop);
 $('#overRank').addEventListener('click', openLbFull);
 
 // ── Champion pill + full leaderboard ──
@@ -490,10 +684,10 @@ const lbEl = $('#lb');
 const lbFullEl = $('#lbFull');
 const lblistEl = $('#lblist');
 
-const ALTERU_APP_URL = 'https://apps.apple.com/app/id6769646546';
+const ALTERU_APP_URL = 'https://alteru.app';
 const LB_DOWNLOAD_TEXT = (navigator.language || '').toLowerCase().startsWith('zh')
   ? { hint: '在 AlterU 中打开即可查看排行榜', cta: '下载 AlterU' }
-  : { hint: 'Open in AlterU to view the leaderboard.', cta: 'Get AlterU on the App Store' };
+  : { hint: 'Open in AlterU to view the leaderboard.', cta: 'Get AlterU' };
 function renderLBDownload(){
   lbData = { rows: [], meId: '' };
   if (lbEl) lbEl.classList.remove('show');
@@ -502,7 +696,7 @@ function renderLBDownload(){
   box.className = 'lb-download-state';
   const icon = document.createElement('span');
   icon.className = 'ico';
-  icon.textContent = '🏆';
+  icon.innerHTML = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7 3h10v5c0 3-2.1 5.4-5 5.9V17h3v2H9v-2h3v-3.1C9.1 13.4 7 11 7 8V3Zm-3 2h3v4c0 2.8 2.2 5 5 5v2C7.6 15.4 4 12.6 4 9V5Zm16 0v4c0 3.6-3.6 6.4-8 7v-2c2.8 0 5-2.2 5-5V5h3Z"/></svg>';
   const text = document.createElement('span');
   text.className = 'txt';
   text.textContent = LB_DOWNLOAD_TEXT.hint;
