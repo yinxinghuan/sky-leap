@@ -269,8 +269,21 @@ export function startGame({ canvas, hud, selectedCharacter = 'commuter' }){
 
   let hero = null, rig = null, rigBase = null;
   function buildHeroMesh(charKey){
-    const model = cloneCharacterAsset(charKey) || (CHARACTERS[charKey] || CHARACTERS.shopkeeper)();
-    model.scale.setScalar(HERO_SCALE);
+    const libraryModel = cloneCharacterAsset(charKey);
+    const model = libraryModel || (CHARACTERS[charKey] || CHARACTERS.shopkeeper)();
+    // The shared animal GLBs vary much more in raw height and width than the
+    // biped library. Fit both dimensions before the game-wide scale so a bear
+    // or cow reads as a different silhouette without swallowing a whole pad.
+    if (libraryModel && ANIMAL_KEYS.has(charKey)) {
+      const raw = new THREE.Box3().setFromObject(model);
+      const rawSize = raw.getSize(new THREE.Vector3());
+      const horizontal = Math.max(.01, rawSize.x, rawSize.z);
+      const bulky = ['pig', 'cow', 'bear'].includes(charKey);
+      const fit = Math.min(2.46 / Math.max(.01, rawSize.y), (bulky ? 2.16 : 1.98) / horizontal);
+      model.scale.setScalar(HERO_SCALE * fit);
+    } else {
+      model.scale.setScalar(HERO_SCALE);
+    }
     model.rotation.y = 0;                    // face squarely down the rail (+z) at the next pillar
     const bb = new THREE.Box3().setFromObject(model);
     const CENTER = (bb.max.y - bb.min.y) / 2;
@@ -288,6 +301,7 @@ export function startGame({ canvas, hud, selectedCharacter = 'commuter' }){
     };
     root.userData.isAnimal = ANIMAL_KEYS.has(charKey);
     root.userData.characterKey = charKey;
+    root.userData.heroBounds = bb.getSize(new THREE.Vector3());
     return root;
   }
   function setHero(charKey){
