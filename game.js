@@ -15,7 +15,8 @@ import { RenderPass } from 'three/addons/postprocessing/RenderPass.js';
 import { UnrealBloomPass } from 'three/addons/postprocessing/UnrealBloomPass.js';
 import { OutputPass } from 'three/addons/postprocessing/OutputPass.js';
 import { platStone, platPillar, runeDisk, bgPillars } from './builders/skyruins.js?v=33';
-import { CHARACTERS, CHARACTER_CATALOG } from './builders/characters.js?v=3';
+import { CHARACTERS } from './builders/characters.js?v=3';
+import { CHARACTER_CATALOG, CHARACTER_KEYS, ANIMAL_KEYS, cloneCharacterAsset, preloadCharacterLibrary } from './src/character-library.js';
 import { P, box, cyl, ball, darken } from '@engine-3d';
 import { CARTRIDGE } from './cartridge/index.js?v=1';
 
@@ -64,7 +65,7 @@ const rand = (a, b) => a + Math.random() * (b - a);
 function jumpDist(c){ return MIN_DIST + (MAX_DIST - MIN_DIST) * easeInQuad(c); }
 function arcHeight(c){ return BASE_H + c * PEAK_H; }
 
-export function startGame({ canvas, hud, selectedCharacter = 'shopkeeper' }){
+export function startGame({ canvas, hud, selectedCharacter = 'commuter' }){
   const renderer = new THREE.WebGLRenderer({ canvas, antialias: true });
   renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
   renderer.shadowMap.enabled = true;
@@ -261,13 +262,14 @@ export function startGame({ canvas, hud, selectedCharacter = 'shopkeeper' }){
   // so the existing jump code drives root.scale / flip.rotation unchanged, and
   // the rig limbs animate through the leap. The shop owns progression; this
   // renderer only receives a valid equipped key and never randomizes it. ──
-  const COLLECTIBLE_KEYS = new Set(CHARACTER_CATALOG.map(character => character.key));
+  const COLLECTIBLE_KEYS = CHARACTER_KEYS;
   const HERO_SCALE = 0.76;
-  let activeCharKey = COLLECTIBLE_KEYS.has(selectedCharacter) ? selectedCharacter : 'shopkeeper';
+  let activeCharKey = COLLECTIBLE_KEYS.has(selectedCharacter) ? selectedCharacter : 'commuter';
+  let libraryReady = false;
 
   let hero = null, rig = null, rigBase = null;
   function buildHeroMesh(charKey){
-    const model = (CHARACTERS[charKey] || CHARACTERS.shopkeeper)();
+    const model = cloneCharacterAsset(charKey) || (CHARACTERS[charKey] || CHARACTERS.shopkeeper)();
     model.scale.setScalar(HERO_SCALE);
     model.rotation.y = 0;                    // face squarely down the rail (+z) at the next pillar
     const bb = new THREE.Box3().setFromObject(model);
@@ -280,7 +282,12 @@ export function startGame({ canvas, hud, selectedCharacter = 'shopkeeper' }){
     root.add(flip);
     root.userData.isHero = true;
     root.userData.flip = flip;
-    root.userData.rig = model.userData.rig || null;
+    root.userData.rig = model.userData.rig || {
+      legL: model.getObjectByName('rig_legL'), legR: model.getObjectByName('rig_legR'),
+      armL: model.getObjectByName('rig_armL'), armR: model.getObjectByName('rig_armR'),
+    };
+    root.userData.isAnimal = ANIMAL_KEYS.has(charKey);
+    root.userData.characterKey = charKey;
     return root;
   }
   function setHero(charKey){
@@ -288,12 +295,16 @@ export function startGame({ canvas, hud, selectedCharacter = 'shopkeeper' }){
     hero = buildHeroMesh(charKey);
     scene.add(hero);
     rig = hero.userData.rig;
-    rigBase = rig ? {
+    rigBase = rig?.legL && rig?.legR && rig?.armL && rig?.armR ? {
       legL: rig.legL.rotation.x, legR: rig.legR.rotation.x,
       armL: rig.armL.rotation.x, armR: rig.armR.rotation.x,
     } : null;
   }
   setHero(activeCharKey);
+  preloadCharacterLibrary().then(() => {
+    libraryReady = true;
+    if (state === IDLE || state === DEAD) setHero(activeCharKey);
+  }).catch(() => { /* Keep the compact fallback roster playable if assets fail. */ });
   const smooth = u => u * u * (3 - 2 * u);
   // piecewise track: keys = [[t,val],...] ascending, smooth-stepped between.
   function track(t, keys){
@@ -315,6 +326,13 @@ export function startGame({ canvas, hud, selectedCharacter = 'shopkeeper' }){
   }
   // coiled wind-up while charging (c: 0→1) — arms drawn back, legs splay back.
   function poseCharge(c){
+    if (hero?.userData.isAnimal) {
+      const key = hero.userData.characterKey;
+      const heavy = ['pig', 'cow', 'sheep', 'bear'].includes(key);
+      hero.scale.set(1 + .08 * c, 1 - (heavy ? .18 : .28) * c, 1 + .08 * c);
+      hero.userData.flip.rotation.x = (key === 'frog' ? .18 : .09) * c;
+      return;
+    }
     if (!rig || !rigBase) return;
     rig.armL.rotation.set(rigBase.armL + 0.85 * c, 0, -0.12 * c);
     rig.armR.rotation.set(rigBase.armR + 0.85 * c, 0,  0.12 * c);
@@ -325,6 +343,17 @@ export function startGame({ canvas, hud, selectedCharacter = 'shopkeeper' }){
   const LEG_TRACK = [[0, 0.22], [0.16, 0.55], [0.42, -1.55], [0.66, -1.5], [0.9, 0.15], [1, 0]];
   const ARM_TRACK = [[0, 0.85], [0.13, -1.35], [0.45, -0.55], [0.78, -0.15], [1, 0]];
   function poseFlight(t){
+    if (hero?.userData.isAnimal) {
+      const key = hero.userData.characterKey;
+      const hop = Math.sin(t * Math.PI);
+      const bird = ['chicken', 'duck'].includes(key);
+      const bounder = ['cat', 'dog', 'fox', 'rabbit'].includes(key);
+      const heavy = ['pig', 'cow', 'sheep', 'bear'].includes(key);
+      hero.userData.flip.rotation.x = bird ? Math.sin(t * Math.PI * 2) * .25 : bounder ? Math.sin(t * Math.PI) * .36 : key === 'frog' ? Math.sin(t * Math.PI) * .22 : heavy ? Math.sin(t * Math.PI) * .12 : .18 * hop;
+      hero.scale.set(1 + (bounder ? .18 : .10) * hop, 1 - (key === 'frog' ? .22 : .11) * hop, 1 + (bird ? .14 : .08) * hop);
+      if (rig?.legL && rig?.legR) { const leg = bird ? Math.sin(t * Math.PI * 3) * .65 : bounder ? Math.sin(t * Math.PI * 2) * .78 : heavy ? Math.sin(t * Math.PI) * .28 : .45 * hop; rig.legL.rotation.x = leg; rig.legR.rotation.x = -leg; }
+      return;
+    }
     if (!rig || !rigBase) return;
     const leg = track(t, LEG_TRACK), arm = track(t, ARM_TRACK);
     const wobble = Math.sin(t * Math.PI) * 0.16;     // cycling life
@@ -882,9 +911,19 @@ export function startGame({ canvas, hud, selectedCharacter = 'shopkeeper' }){
       // way up, a small hop that never dips below the pad.
       idleClock += gdt;
       const air = Math.abs(Math.sin(idleClock * 3.2));     // 0 = grounded, 1 = apex (~1s bounces)
-      hero.position.y = PLAT_TOP + 0.07 * air;
-      hero.scale.set(1, 1 + 0.055 * air, 1);
-      if (rig && rigBase){
+      if (hero.userData.isAnimal){
+        const key = hero.userData.characterKey;
+        const bird = ['chicken', 'duck'].includes(key), heavy = ['pig', 'cow', 'sheep', 'bear'].includes(key);
+        const bounce = key === 'frog' ? air : heavy ? air * .32 : bird ? air * .65 : air * .78;
+        hero.position.y = PLAT_TOP + .10 * bounce;
+        hero.scale.set(1 + (heavy ? .025 : .05) * air, 1 + (bird ? .09 : .045) * air, 1 + .025 * air);
+        hero.userData.flip.rotation.x = bird ? Math.sin(idleClock * 5.6) * .09 : key === 'frog' ? Math.sin(idleClock * 3.2) * .11 : 0;
+        if (rig?.legL && rig?.legR) { const step = heavy ? Math.sin(idleClock * 3.2) * .12 : Math.sin(idleClock * 4.4) * .24; rig.legL.rotation.x = step; rig.legR.rotation.x = -step; }
+      } else {
+        hero.position.y = PLAT_TOP + 0.07 * air;
+        hero.scale.set(1, 1 + 0.055 * air, 1);
+      }
+      if (!hero.userData.isAnimal && rig && rigBase){
         rig.armL.rotation.x = rigBase.armL - 0.16 * air;
         rig.armR.rotation.x = rigBase.armR - 0.16 * air;
         rig.legL.rotation.x = rigBase.legL; rig.legR.rotation.x = rigBase.legR;
@@ -946,5 +985,5 @@ export function startGame({ canvas, hud, selectedCharacter = 'shopkeeper' }){
     return true;
   }
 
-  return { chargeStart, chargeRelease, restart, setCharacter };
+  return { chargeStart, chargeRelease, restart, setCharacter, get libraryReady(){ return libraryReady; } };
 }
