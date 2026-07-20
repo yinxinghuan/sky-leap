@@ -175,36 +175,37 @@
   #shop { position:fixed; inset:0; z-index:45; display:none; align-items:flex-end; justify-content:center;
     padding:max(16px,env(safe-area-inset-top)) 12px max(12px,env(safe-area-inset-bottom)); background:rgba(38,28,62,.48); -webkit-backdrop-filter:blur(5px); backdrop-filter:blur(5px); }
   #shop.show { display:flex; animation:sl-fade .22s ease; }
-  .shop-sheet { width:min(520px,100%); max-height:min(780px,92dvh); display:flex; flex-direction:column; overflow:hidden; border-radius:28px 28px 22px 22px; color:var(--ink); background:var(--glass-strong); border:1px solid var(--glass-border); box-shadow:0 24px 60px rgba(33,25,60,.34); animation:sl-rise .3s cubic-bezier(.2,1.1,.4,1); }
-  .shop-head { padding:19px 18px 14px; display:flex; align-items:center; justify-content:space-between; border-bottom:1px solid rgba(58,44,82,.1); }
-  .shop-eyebrow { margin:0 0 4px; color:var(--ink-soft); font-size:11px; font-weight:700; letter-spacing:.15em; }
+  .shop-sheet { width:min(520px,100%); max-height:min(780px,92dvh); display:flex; flex-direction:column; overflow:hidden; border-radius:28px 28px 22px 22px; color:#3a2c52; background:linear-gradient(165deg,#fff8fc,#f5efff); border:1px solid rgba(255,255,255,.9); box-shadow:0 24px 60px rgba(43,31,79,.42), inset 0 1px 0 #fff; animation:sl-rise .3s cubic-bezier(.2,1.1,.4,1); }
+  .shop-head { padding:19px 18px 14px; display:flex; align-items:center; justify-content:space-between; border-bottom:1px solid rgba(95,69,138,.12); }
+  .shop-eyebrow { margin:0 0 4px; color:#8e6a9e; font-size:11px; font-weight:700; letter-spacing:.15em; }
   .shop-head h2 { margin:0; font-size:27px; line-height:1; }
-  .shop-wallet { display:flex; align-items:center; gap:6px; padding:9px 11px; border-radius:12px; background:rgba(255,255,255,.65); color:var(--pink-deep); font-weight:700; }
+  .shop-wallet { display:flex; align-items:center; gap:6px; padding:9px 11px; border-radius:12px; background:#fff; border:1px solid rgba(255,77,151,.16); color:var(--pink-deep); box-shadow:0 4px 10px rgba(88,52,130,.09); font-weight:700; }
   .shop-wallet svg { width:18px; height:18px; fill:var(--gold); stroke:#bd7e20; stroke-width:1.5; }
-  .shop-note { margin:0; padding:12px 18px; color:var(--ink-soft); font-size:13px; line-height:1.45; }
+  .shop-note { margin:0; padding:12px 18px; color:#785d91; font-size:13px; line-height:1.45; }
   .collection-avatar svg { width:72%; height:72%; fill:currentColor; }
-  .shop-stage { position:relative; height:min(350px,42dvh); min-height:230px; overflow:hidden; border-top:1px solid rgba(255,255,255,.72); border-bottom:4px solid var(--shop-tone,#75b8dd); background:radial-gradient(circle at 50% 30%,rgba(255,255,255,.92),rgba(255,255,255,.4) 57%,rgba(111,213,191,.13)); }
-  .shop-stage::after { content:""; position:absolute; left:50%; bottom:23px; width:136px; height:20px; transform:translateX(-50%); border:2px solid rgba(58,44,82,.7); border-radius:50%; background:rgba(255,255,255,.8); box-shadow:0 7px 0 rgba(58,44,82,.15); }
-  .shop-preview { position:absolute; bottom:34px; width:68%; height:84%; object-fit:contain; filter:drop-shadow(0 11px 8px rgba(58,44,82,.22)); transition:opacity .18s ease, transform .18s ease; }
-  .shop-preview--main { left:16%; z-index:2; }
-  .shop-preview--side { width:38%; height:54%; bottom:43px; opacity:.62; filter:grayscale(.12) drop-shadow(0 7px 6px rgba(58,44,82,.15)); }
+  .shop-stage { position:relative; height:min(350px,42dvh); min-height:230px; overflow:hidden; border-top:1px solid rgba(255,255,255,.72); border-bottom:3px solid var(--pink); background:radial-gradient(circle at 50% 28%,#fff 0 12%,rgba(255,232,246,.94) 42%,rgba(210,221,255,.82) 100%); }
+  .shop-stage::before { content:""; position:absolute; inset:auto -12% -42px; height:112px; border-radius:50%; background:rgba(255,255,255,.38); filter:blur(8px); }
+  .shop-stage::after { content:""; position:absolute; left:50%; bottom:23px; width:136px; height:20px; transform:translateX(-50%); border:2px solid rgba(255,77,151,.55); border-radius:50%; background:#fff7fc; box-shadow:0 7px 0 rgba(91,62,126,.16); }
+  #shopCanvas { position:absolute; z-index:2; inset:0; width:100%; height:100%; pointer-events:none; }
+  .shop-preview { position:absolute; z-index:1; bottom:43px; width:38%; height:54%; object-fit:contain; opacity:.38; filter:saturate(.85) drop-shadow(0 7px 6px rgba(58,44,82,.12)); }
+  .shop-preview--side { transition:opacity .18s ease, transform .18s ease; }
   #shopPrev { left:-19%; transform:rotateY(20deg); } #shopNext { right:-19%; transform:rotateY(-20deg); }
-  .shop-step { position:absolute; z-index:4; top:50%; width:52px; height:52px; transform:translateY(-50%); display:grid; place-items:center; border:3px solid var(--ink); border-radius:50%; background:#fffdf6; color:var(--ink); box-shadow:3px 3px 0 rgba(58,44,82,.28); cursor:pointer; }
-  .shop-step:active { transform:translateY(-50%) translate(2px,2px); box-shadow:1px 1px 0 rgba(58,44,82,.28); }
+  .shop-step { position:absolute; z-index:4; top:50%; width:52px; height:52px; transform:translateY(-50%); display:grid; place-items:center; border:0; border-radius:50%; background:var(--pink); color:#fff; box-shadow:0 7px 16px rgba(236,58,134,.32), inset 0 1px 0 rgba(255,255,255,.42); cursor:pointer; }
+  .shop-step:active { transform:translateY(-50%) scale(.94); box-shadow:0 3px 8px rgba(236,58,134,.32); }
   .shop-step svg { width:25px; height:25px; fill:none; stroke:currentColor; stroke-width:2.4; stroke-linecap:round; stroke-linejoin:round; }
   #shopPrevBtn { left:12px; } #shopNextBtn { right:12px; }
-  .shop-count { position:absolute; z-index:4; right:13px; bottom:12px; padding:5px 8px; border-radius:999px; color:#fff; background:var(--ink); font-size:12px; font-weight:700; font-variant-numeric:tabular-nums; }
+  .shop-count { position:absolute; z-index:4; right:13px; bottom:12px; padding:5px 8px; border-radius:999px; color:#fff; background:#5a4376; font-size:12px; font-weight:700; font-variant-numeric:tabular-nums; }
   .shop-identity { padding:11px 18px 8px; text-align:left; }
   .shop-tier { margin:0 0 2px; color:var(--pink-deep); font-size:10px; font-weight:700; letter-spacing:.12em; }
   .shop-name-line { display:flex; align-items:baseline; justify-content:space-between; gap:10px; }
   .shop-name-line strong { font-size:26px; line-height:1.1; } .shop-name-line small { color:var(--ink-soft); font-size:12px; white-space:nowrap; }
   .shop-state { display:inline-flex; align-items:center; gap:4px; margin-top:5px; min-height:25px; padding:3px 8px; border:1px solid rgba(58,44,82,.24); border-radius:999px; color:var(--ink-soft); font-size:12px; font-weight:700; }
-  .shop-state.owned { border-color:#2c9c72; color:#177150; } .shop-state.locked { color:var(--ink); background:rgba(255,207,77,.22); }
+  .shop-state.owned { border-color:rgba(255,77,151,.45); color:var(--pink-deep); background:rgba(255,218,235,.43); } .shop-state.locked { color:var(--ink); background:rgba(255,207,77,.24); }
   .shop-state svg, .shop-action svg { width:15px; height:15px; fill:var(--gold); stroke:#bd7e20; stroke-width:1.5; }
-  .shop-rail { display:flex; justify-content:center; gap:5px; padding:0 18px 10px; } .shop-rail i { width:18px; height:3px; border-radius:99px; background:#d7cfbf; } .shop-rail i.active { width:28px; background:var(--shop-tone,#75b8dd); } .shop-rail i.owned { background:#74cdb1; }
-  .shop-action { min-height:52px; margin:0 14px 10px; display:flex; align-items:center; justify-content:center; gap:7px; border:3px solid var(--ink); border-radius:999px; color:var(--ink); background:var(--gold); box-shadow:3px 3px 0 rgba(58,44,82,.28); font:700 18px var(--font); cursor:pointer; }
-  .shop-action.equipped { color:#887f6b; background:#ded6c7; } .shop-action:disabled { cursor:default; opacity:.78; }
-  .shop-close { min-height:48px; margin:0 14px 14px; border:1px solid rgba(255,255,255,.76); border-radius:999px; color:var(--ink); background:rgba(255,255,255,.58); font:600 16px var(--font); cursor:pointer; }
+  .shop-rail { display:flex; justify-content:center; gap:5px; padding:0 18px 10px; } .shop-rail i { width:18px; height:3px; border-radius:99px; background:#ddd1e7; } .shop-rail i.active { width:28px; background:var(--pink); } .shop-rail i.owned { background:#b8a2cc; }
+  .shop-action { min-height:52px; margin:0 14px 10px; display:flex; align-items:center; justify-content:center; gap:7px; border:0; border-radius:999px; color:#fff; background:linear-gradient(145deg,var(--pink-2),var(--pink) 58%,var(--pink-deep)); box-shadow:0 9px 18px rgba(236,58,134,.32), inset 0 1px 0 rgba(255,255,255,.5); font:700 18px var(--font); cursor:pointer; }
+  .shop-action.equipped { color:#6c5f88; background:#e5ddeb; box-shadow:none; } .shop-action:disabled { cursor:default; opacity:.78; }
+  .shop-close { min-height:48px; margin:0 14px 14px; border:0; border-radius:999px; color:#725988; background:rgba(255,255,255,.7); font:600 16px var(--font); cursor:pointer; }
   @media (max-height:620px) {
     #shop { padding:7px 12px; } .shop-head { padding:11px 14px 9px; } .shop-head h2 { font-size:24px; }
     .shop-note { padding:7px 14px; font-size:12px; } .shop-stage { height:200px; min-height:190px; }
@@ -414,7 +415,7 @@
     <p class="shop-note">每局结束获得车票。先看看他们的样子，再决定带谁跳向下一站。</p>
     <div id="shopStage" class="shop-stage">
       <img id="shopPrev" class="shop-preview shop-preview--side" alt="" draggable="false" />
-      <img id="shopPreview" class="shop-preview shop-preview--main" alt="" draggable="false" />
+      <canvas id="shopCanvas" aria-label="当前角色 3D 预览"></canvas>
       <img id="shopNext" class="shop-preview shop-preview--side" alt="" draggable="false" />
       <button id="shopPrevBtn" class="shop-step" type="button" aria-label="上一位角色"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m14 5-7 7 7 7"/></svg></button>
       <button id="shopNextBtn" class="shop-step" type="button" aria-label="下一位角色"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m10 5 7 7-7 7"/></svg></button>
@@ -493,6 +494,8 @@ function characterGlyph(key){ return `<svg viewBox="0 0 24 24" aria-hidden="true
 let previewIndex = Math.max(0, CHARACTER_CATALOG.findIndex(character => character.key === collection.equipped));
 let previewRenderer = null;
 const previewThumbs = new Map();
+let shopRenderer = null, shopScene = null, shopCamera = null, shopModel = null, shopLastFrame = 0, shopPreviewFrame = null;
+const shopCanvas = $('#shopCanvas');
 function thumbFor(character){
   if (previewThumbs.has(character.key)) return previewThumbs.get(character.key);
   if (!previewRenderer) {
@@ -517,6 +520,56 @@ function thumbFor(character){
   scene.remove(model); model.traverse(object => { if (!object.isMesh) return; object.geometry?.dispose(); const material = object.material; if (Array.isArray(material)) material.forEach(item => item.dispose?.()); else material?.dispose?.(); });
   previewThumbs.set(character.key, url); return url;
 }
+function disposePreviewModel(model){
+  if (!model) return;
+  model.traverse(object => {
+    if (!object.isMesh) return;
+    object.geometry?.dispose();
+    const material = object.material;
+    if (Array.isArray(material)) material.forEach(item => item.dispose?.());
+    else material?.dispose?.();
+  });
+}
+function ensureLivePreview(){
+  if (shopRenderer) return;
+  shopRenderer = new THREE.WebGLRenderer({ canvas: shopCanvas, alpha: true, antialias: true });
+  shopRenderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 1.5));
+  shopRenderer.outputColorSpace = THREE.SRGBColorSpace;
+  shopScene = new THREE.Scene();
+  shopScene.add(new THREE.HemisphereLight(0xfff4fb, 0x5c4c85, 1.35));
+  const key = new THREE.DirectionalLight(0xffffff, 1.65); key.position.set(4, 7, 6); shopScene.add(key);
+  const rim = new THREE.DirectionalLight(0xff79b7, 1.05); rim.position.set(-5, 4, -5); shopScene.add(rim);
+  shopCamera = new THREE.PerspectiveCamera(30, 1, 0.1, 100);
+}
+function setLivePreview(character){
+  ensureLivePreview();
+  if (shopModel) { shopScene.remove(shopModel); disposePreviewModel(shopModel); }
+  const model = (CHARACTERS[character.key] || CHARACTERS.shopkeeper)();
+  const bounds = new THREE.Box3().setFromObject(model);
+  const size = bounds.getSize(new THREE.Vector3()); const center = bounds.getCenter(new THREE.Vector3());
+  const targetHeight = 2.75;
+  const scale = targetHeight / Math.max(0.01, size.y);
+  model.position.set(-center.x, -bounds.min.y, -center.z);
+  model.scale.setScalar(scale);
+  shopModel = new THREE.Group(); shopModel.add(model); shopScene.add(shopModel);
+}
+function renderLivePreview(timestamp){
+  shopPreviewFrame = null;
+  if (!shopRenderer || !$('#shop').classList.contains('show') || !shopModel) return;
+  const rect = shopCanvas.getBoundingClientRect();
+  if (rect.width < 2 || rect.height < 2) return;
+  const width = Math.round(rect.width), height = Math.round(rect.height);
+  if (shopRenderer.domElement.width !== Math.round(width * shopRenderer.getPixelRatio()) || shopRenderer.domElement.height !== Math.round(height * shopRenderer.getPixelRatio())) {
+    shopRenderer.setSize(width, height, false); shopCamera.aspect = width / height; shopCamera.updateProjectionMatrix();
+  }
+  const dt = Math.min(.05, Math.max(0, (timestamp - shopLastFrame) / 1000)); shopLastFrame = timestamp;
+  if (!matchMedia('(prefers-reduced-motion: reduce)').matches) shopModel.rotation.y += dt * 0.48;
+  shopModel.position.y = Math.sin(timestamp * 0.0025) * 0.025 - 1.18;
+  shopCamera.position.set(4.8, 2.15, 7.2); shopCamera.lookAt(0, 0.22, 0);
+  shopRenderer.render(shopScene, shopCamera);
+  shopPreviewFrame = requestAnimationFrame(renderLivePreview);
+}
+function startLivePreview(){ if (!shopPreviewFrame) shopPreviewFrame = requestAnimationFrame(renderLivePreview); }
 function renderCollection(){
   const equipped = CHARACTER_CATALOG.find(c => c.key === collection.equipped) || CHARACTER_CATALOG[0];
   const preview = CHARACTER_CATALOG[previewIndex] || equipped;
@@ -529,8 +582,7 @@ function renderCollection(){
   const entryAvatar = $('#collectionEntry .collection-avatar');
   entryAvatar.style.setProperty('--avatar-tone', equipped.tone);
   entryAvatar.innerHTML = characterGlyph(equipped.key);
-  $('#shopStage').style.setProperty('--shop-tone', preview.tone);
-  $('#shopPreview').src = thumbFor(preview); $('#shopPreview').alt = `${preview.name} 角色预览`;
+  if (shopRenderer) setLivePreview(preview);
   $('#shopPrev').src = thumbFor(previous); $('#shopNext').src = thumbFor(next);
   $('#shopCount').textContent = `${previewIndex + 1} / ${CHARACTER_CATALOG.length}`;
   $('#shopTier').textContent = preview.tier;
@@ -559,9 +611,9 @@ function awardTickets(score){
   return earned;
 }
 function openShop(){
-  renderCollection(); $('#shop').classList.add('show'); $('#shop').setAttribute('aria-hidden', 'false');
+  renderCollection(); $('#shop').classList.add('show'); $('#shop').setAttribute('aria-hidden', 'false'); setLivePreview(CHARACTER_CATALOG[previewIndex]); startLivePreview();
 }
-function closeShop(){ $('#shop').classList.remove('show'); $('#shop').setAttribute('aria-hidden', 'true'); }
+function closeShop(){ $('#shop').classList.remove('show'); $('#shop').setAttribute('aria-hidden', 'true'); if (shopPreviewFrame) { cancelAnimationFrame(shopPreviewFrame); shopPreviewFrame = null; } }
 renderCollection();
 
 function applyCartridgeCopy(){

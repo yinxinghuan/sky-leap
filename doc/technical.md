@@ -20,7 +20,7 @@
 
 - 主循环：`game.js` 以 `requestAnimationFrame` 更新蓄力、抛物线、镜头、天气、粒子和 WebGL 合成器；DOM 只在分数、连击和结算变化时更新。
 - 角色选择：`startGame({ selectedCharacter })` 接收已装备角色；`setCharacter()` 只接受 `CHARACTER_CATALOG` 中的 key，并且在待机/结算时立刻重建角色网格。`reset()` 始终重用当前装备，不再随机抽取角色。
-- 收藏存档：`index.html` 的 `sl.collection.v1` 保存 `{ tickets, unlocked, equipped }`。初始角色为 `shopkeeper`；结算时 `awardTickets()` 按分数增加 1–8 张车票；购买成功后立即写回并装备。`thumbFor()` 以同一 `CHARACTERS` 模型、Three.js 灯光和透视相机生成并缓存透明 PNG，让锁定角色在购买前可完整预览。
+- 收藏存档：`index.html` 的 `sl.collection.v1` 保存 `{ tickets, unlocked, equipped }`。初始角色为 `shopkeeper`；结算时 `awardTickets()` 按分数增加 1–8 张车票；购买成功后立即写回并装备。`setLivePreview()` 将当前 `CHARACTERS` 模型装入商店专用 Three.js 画布，`renderLivePreview()` 在商店打开时以 requestAnimationFrame 缓慢转身、浮动并在关闭时停止循环；`thumbFor()` 只为两侧相邻角色生成缓存 PNG。
 - 交互隔离：全局 Pointer 事件在角色商店、收藏入口和排行榜上直接返回，避免 UI 点击误触蓄力。商店内卡片使用 Click，底部抽屉内部可滚动。
 - 平台：`public/aigram-bridge.js` 的排行榜 API 仍在死亡时提交分数；HTML 内保留冠军入口、榜单和 `score_beat` 通知流程。
 
