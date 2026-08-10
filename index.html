@@ -839,7 +839,7 @@ function openLbFull(){
   lblistEl.innerHTML = '';
   for (const r of lbData.rows) lblistEl.appendChild(lbFullRow(r, String(r.user_id) === lbData.meId));
   lbFullEl.classList.add('show');
-  refreshLB();
+  if (window.Aigram?.isInAigram) refreshLB();
 }
 $('#lbClose').addEventListener('click', () => lbFullEl.classList.remove('show'));
 
@@ -901,7 +901,7 @@ async function trySendBeatNotify(myScore){
   } catch (e) { /* silent */ }
 }
 
-refreshLB();
+if (window.Aigram?.isInAigram) refreshLB();
 </script>
 </body>
 </html>
