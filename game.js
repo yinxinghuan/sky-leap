@@ -693,8 +693,8 @@ export function startGame({ canvas, hud, selectedCharacter = 'commuter' }){
   let deadTimer = 0;
   let launchT = 0, airTime = 0, startAlong = 0, dist = 0, apex = 0, trailT = 0;
 
-  function readBest(){ try { return Number(localStorage.getItem('sl.best')) || 0; } catch(e){ return 0; } }
-  function writeBest(v){ try { localStorage.setItem('sl.best', String(v)); } catch(e){} }
+  function readBest(){ try { return Number(alteruLocalStorage.getItem('sl.best')) || 0; } catch(e){ return 0; } }
+  function writeBest(v){ try { alteruLocalStorage.setItem('sl.best', String(v)); } catch(e){} }
 
   function reset(){
     for (const p of plats) disposeGroup(p.mesh);

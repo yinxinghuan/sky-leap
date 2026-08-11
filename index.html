@@ -1,6 +1,7 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
+    <script src="./alteru-storage-scope.js" data-alteru-storage-scope data-game-storage-id="eefd9179-7b36-4440-8b73-0cb1ea4e153e"></script>
 <meta name="game-uuid" content="eefd9179-7b36-4440-8b73-0cb1ea4e153e" />
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover" />
@@ -485,7 +486,7 @@ const GLYPHS = {
 };
 function readCollection(){
   try {
-    const saved = JSON.parse(localStorage.getItem(COLLECTION_KEY) || 'null');
+    const saved = JSON.parse(alteruLocalStorage.getItem(COLLECTION_KEY) || 'null');
     const validKeys = CHARACTER_KEYS;
     if (saved && Array.isArray(saved.unlocked)) return {
       tickets: Math.max(0, Number(saved.tickets) || 0),
@@ -499,7 +500,7 @@ let collection = readCollection();
 let characterLibraryReady = false;
 let characterLibraryFailed = false;
 let activeCategory = '全部';
-function saveCollection(){ try { localStorage.setItem(COLLECTION_KEY, JSON.stringify(collection)); } catch (e) {} }
+function saveCollection(){ try { alteruLocalStorage.setItem(COLLECTION_KEY, JSON.stringify(collection)); } catch (e) {} }
 function characterGlyph(key){ return `<svg viewBox="0 0 24 24" aria-hidden="true"><path d="${GLYPHS[key] || GLYPHS.shopkeeper}"/></svg>`; }
 let previewIndex = Math.max(0, CHARACTER_CATALOG.findIndex(character => character.key === collection.equipped));
 let previewRenderer = null;
