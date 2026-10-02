@@ -1,0 +1,79 @@
+{
+  "guest": [
+    {
+      "tag": "800x450",
+      "tutorial": "Fill eight cases",
+      "start": {
+        "title": "Night\nWing",
+        "sub": "eight-case exhibition",
+        "wing": "WING 1 / 8\n\nFirst crossing\n\nSet the figure on 2 pedestals in one escort.\n\n0 / 2 pedestals\nNext figure · SHOPKEEPER · 0 / 5 tickets",
+        "guide": "Hold Space — cross to the next pedestal"
+      },
+      "airState": "launch",
+      "landed": {
+        "ms": 375,
+        "state": "idle",
+        "score": 1
+      },
+      "mid": "WING 1 / 8\n\nFirst crossing\n\nSet the figure on 2 pedestals in one escort.\n\n1 / 2 pedestals\nNext figure · SHOPKEEPER · 0 / 5 tickets",
+      "result": {
+        "title": "Left the pedestal",
+        "reward": "This escort paid 5 tickets. Place the next figure on the wing.",
+        "report": "0 / 8 wing cases\nOpen case · First crossing\n1 / 2 pedestals\nPlace SHOPKEEPER now · press C · 5 tickets",
+        "rank": "none"
+      },
+      "shelf": {
+        "name": "SHOPKEEPER",
+        "englishDisplay": "none",
+        "state": "Unlock for 5 tickets",
+        "action": "Unlock figure · 5",
+        "title": "Night Wing",
+        "cjk": [],
+        "wing": "WING 1 / 8\n\nFirst crossing\n\nSet the figure on 2 pedestals in one escort.\n\n1 / 2 pedestals\nNext figure · SHOPKEEPER · 5 / 5 tickets\nReady — press C to place SHOPKEEPER"
+      },
+      "banner": "ACQUIRED\n\nSHOPKEEPER\n\nThis figure joins the wing. Press C to choose who crosses next.",
+      "cleared": [],
+      "errors": []
+    },
+    {
+      "tag": "1920x1080",
+      "tutorial": "Fill eight cases",
+      "start": {
+        "title": "Night\nWing",
+        "sub": "eight-case exhibition",
+        "wing": "WING 1 / 8\n\nFirst crossing\n\nSet the figure on 2 pedestals in one escort.\n\n0 / 2 pedestals\nNext figure · SHOPKEEPER · 0 / 5 tickets\nSpace cross · C wing · M music",
+        "guide": "Hold Space — cross to the next pedestal"
+      },
+      "airState": "launch",
+      "landed": {
+        "ms": 375,
+        "state": "idle",
+        "score": 1
+      },
+      "mid": "WING 1 / 8\n\nFirst crossing\n\nSet the figure on 2 pedestals in one escort.\n\n1 / 2 pedestals\nNext figure · SHOPKEEPER · 0 / 5 tickets\nSpace cross · C wing · M music",
+      "result": {
+        "title": "Left the pedestal",
+        "reward": "This escort paid 5 tickets. Place the next figure on the wing.",
+        "report": "0 / 8 wing cases\nOpen case · First crossing\n1 / 2 pedestals\nPlace SHOPKEEPER now · press C · 5 tickets",
+        "rank": "none"
+      },
+      "shelf": {
+        "name": "SHOPKEEPER",
+        "englishDisplay": "none",
+        "state": "Unlock for 5 tickets",
+        "action": "Unlock figure · 5",
+        "title": "Night Wing",
+        "cjk": [],
+        "wing": "WING 1 / 8\n\nFirst crossing\n\nSet the figure on 2 pedestals in one escort.\n\n1 / 2 pedestals\nNext figure · SHOPKEEPER · 5 / 5 tickets\nReady — press C to place SHOPKEEPER\nSpace cross · C wing · M music"
+      },
+      "banner": "ACQUIRED\n\nSHOPKEEPER\n\nThis figure joins the wing. Press C to choose who crosses next.",
+      "cleared": [],
+      "errors": []
+    }
+  ],
+  "order": {
+    "wing": "WING 1 / 8\n\nFirst crossing\n\nSet the figure on 2 pedestals in one escort.\n\n0 / 2 pedestals\nNext figure · GRANNY · 20 / 7 tickets\nReady — press C to place GRANNY",
+    "cleared": []
+  },
+  "errors": []
+}
