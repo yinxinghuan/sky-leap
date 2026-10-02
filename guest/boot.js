@@ -3,48 +3,50 @@ import './guest.css';
 import bgmUrl from './audio/chillloopable.mp3';
 import { CHARACTER_CATALOG } from '../src/character-library.js';
 
-const PROGRESS_KEY = 'cg-sky-leap-circuit-v2';
-const TUTORIAL_KEY = 'cg-sky-leap-tutorial-v1';
+const PROGRESS_KEY = 'cg-sky-leap-wing-v3';
+const TUTORIAL_KEY = 'cg-sky-leap-tutorial-v2';
 const MUTE_KEY = 'cg-sky-leap-user-mute';
 
+// Tonight's wing is eight ordered cases. Only the open case can seal, so a
+// later acquisition cannot skip the first pedestal goal.
 const CASES = [
   {
-    id: 'land2', title: 'Open the case', detail: 'Land on 2 shelves in one run.',
+    id: 'land2', title: 'First crossing', detail: 'Set the figure on 2 pedestals in one escort.',
     test: (s) => s.run.landings >= 2,
-    meter: (s) => meter(s.run.landings, 2, 'landings'),
+    meter: (s) => meter(s.run.landings, 2, 'pedestals'),
   },
   {
-    id: 'second', title: 'Second figure', detail: 'Place Shopkeeper. Any fall pays the 5 tickets.',
+    id: 'second', title: 'First acquisition', detail: 'Place Shopkeeper. Any fall pays the 5 tickets.',
     test: (s) => s.owned.owned >= 2,
-    meter: (s) => (s.owned.owned >= 2 ? { label: 'Placed', ratio: 1 } : meter(s.owned.tickets, 5, 'tickets')),
+    meter: (s) => (s.owned.owned >= 2 ? { label: 'Placed on the wing', ratio: 1 } : meter(s.owned.tickets, 5, 'tickets')),
   },
   {
-    id: 'perfect', title: 'Center seal', detail: 'Stamp one PERFECT in the middle of a shelf.',
+    id: 'perfect', title: 'Center plaque', detail: 'Set one PERFECT in the middle of a pedestal.',
     test: (s) => s.progress.perfects >= 1,
     meter: (s) => meter(s.progress.perfects, 1, 'perfect'),
   },
   {
-    id: 'combo', title: 'Window combo', detail: 'Chain a ×2 combo.',
+    id: 'combo', title: 'Paired crossing', detail: 'Chain a ×2 while the figure stays centered.',
     test: (s) => s.run.combo >= 2 || s.progress.bestCombo >= 2,
     meter: (s) => meter(Math.max(s.run.combo, s.progress.bestCombo), 2, 'combo'),
   },
   {
-    id: 'three', title: 'Three on the shelf', detail: 'Own 3 figures. The next two are 7 and 9 tickets.',
+    id: 'three', title: 'Third plinth', detail: 'Own 3 figures. The next two cost 7 and 9 tickets.',
     test: (s) => s.owned.owned >= 3,
     meter: (s) => meter(s.owned.owned, 3, 'figures'),
   },
   {
-    id: 'route', title: 'Long route', detail: 'Reach 8 points in one run.',
-    test: (s) => s.run.score >= 8 || s.progress.bestScore >= 8,
-    meter: (s) => meter(Math.max(s.run.score, s.progress.bestScore), 8, 'points'),
+    id: 'route', title: 'Long gallery', detail: 'Reach 6 points in one escort.',
+    test: (s) => s.run.score >= 6 || s.progress.bestScore >= 6,
+    meter: (s) => meter(Math.max(s.run.score, s.progress.bestScore), 6, 'points'),
   },
   {
-    id: 'after', title: 'After hours', detail: 'Place a monster or animal. Vampire is 20 tickets, Pig is 24.',
+    id: 'after', title: 'After hours', detail: 'Place a rare figure. Vampire is 12 tickets, Pig is 16.',
     test: (s) => s.owned.special >= 1,
     meter: (s) => rareMeter(s.owned),
   },
   {
-    id: 'five', title: 'Five on the shelf', detail: 'Own 5 figures. Shopkeeper through Blonde are 5 to 11 tickets.',
+    id: 'five', title: 'Wing complete', detail: 'Own 5 figures. Shopkeeper through Blonde are 5 to 11.',
     test: (s) => s.owned.owned >= 5,
     meter: (s) => meter(s.owned.owned, 5, 'figures'),
   },
@@ -72,18 +74,18 @@ function applyGuestShelf() {
   for (const character of CHARACTER_CATALOG) {
     if (character.name) EXACT.set(character.name, character.en);
     if (character.cost === 0) continue;
-    if (character.category === '怪物') character.cost = 20 + monsters++ * 4;
-    else if (character.category === '动物') character.cost = 24 + animals++ * 4;
+    if (character.category === '怪物') character.cost = 12 + monsters++ * 3;
+    else if (character.category === '动物') character.cost = 16 + animals++ * 3;
     else character.cost = 5 + people++ * 2;
   }
 }
 
 const EXACT = new Map([
-  ['角色收藏', 'Toy shelf'],
+  ['角色收藏', 'The wing'],
   ['张车票', 'tickets'],
-  ['通勤者衣柜', 'Figurine case'],
-  ['每局结束获得车票。先看看他们的样子，再决定带谁跳向下一站。', 'Each fall pays tickets. Preview a figure, then choose who leaps next.'],
-  ['继续跳', 'Back to the circuit'],
+  ['通勤者衣柜', 'Night Wing'],
+  ['每局结束获得车票。先看看他们的样子，再决定带谁跳向下一站。', 'Crossings pay tickets. Tickets open the next figure. The other 51 are the reserve.'],
+  ['继续跳', 'Back to the pedestals'],
   ['全部 56', 'All 56'],
   ['人物 37', 'People 37'],
   ['怪物 8', 'Monsters 8'],
@@ -95,12 +97,12 @@ const EXACT = new Map([
   ['角色仓库载入中…', 'Opening the case…'],
   ['角色仓库正在载入 56 个形象…', 'Loading 56 figures…'],
   ['角色仓库暂不可用，请稍后重试', 'The case could not load. Try again in a moment.'],
-  ['Hold to charge', 'Hold Space or the mouse'],
-  ['hold & release to soar', 'figurine circuit'],
-  ['Fell into the clouds', 'Missed the shelf'],
-  ['Character collection', 'Figurine case'],
-  ['Reached', 'Score'],
-  ['SKY LEAP COLLECTION', 'FIGURINE CASE'],
+  ['Hold to charge', 'Hold Space — cross to the next pedestal'],
+  ['hold & release to soar', 'eight-case exhibition'],
+  ['Fell into the clouds', 'Left the pedestal'],
+  ['Character collection', 'Open the wing'],
+  ['Reached', 'Run'],
+  ['SKY LEAP COLLECTION', 'TONIGHT\'S EXHIBIT'],
   ['起始', 'Starter'],
   ['通勤者', 'Commuter'],
   ['特殊', 'Special'],
@@ -117,7 +119,7 @@ const TEXT_RULES = [
   [/^还差 (\d+) 张车票$/, '$1 tickets short'],
   [/^解锁角色 · (\d+)$/, 'Unlock figure · $1'],
   [/^收藏 (\d+) \/ (\d+)$/, 'Shelf $1 / $2'],
-  [/^本局获得 (\d+) 张车票 · 再跳几步，解锁下一位通勤者$/, 'This fall paid $1 tickets. Keep leaping to open the next figure.'],
+  [/^本局获得 (\d+) 张车票 · 再跳几步，解锁下一位通勤者$/, 'This escort paid $1 tickets. Place the next figure on the wing.'],
   [/^(\d+) 张车票$/, '$1 tickets'],
 ];
 applyGuestShelf();
@@ -291,7 +293,7 @@ function buildChrome(stage) {
       <p class="cg-step">AUDIO</p>
       <h2 id="cg-credits-title">Music</h2>
       <p><strong>Chill (Loopable)</strong> by Alex McCulloch (Pro Sensory). CC0 1.0, public domain, commercial use allowed. Source: opengameart.org/content/chill-loopable. The track is bundled and looped.</p>
-      <p>Figures, shelves, and leap sounds are part of Sky Leap. This guest build adds the figurine-circuit cases on top.</p>
+      <p>Figures and crossing sounds are part of Sky Leap. This guest build is the Night Wing: eight ordered exhibition cases on top of the same pedestals.</p>
       <div class="cg-actions"><button type="button" class="cg-primary" id="cg-credits-close">Close</button></div>
     </div>`;
   stage.append(panel, toast, banner, mute, creditsBtn, credits);
@@ -342,8 +344,20 @@ function translateTree(root) {
 }
 
 function watchHostCopy(root) {
-  const observer = new MutationObserver(() => translateTree(root));
+  const observer = new MutationObserver(() => {
+    translateTree(root);
+    dressMuseum();
+  });
   observer.observe(root, { subtree: true, childList: true, characterData: true });
+  dressMuseum();
+}
+
+function dressMuseum() {
+  const mark = document.querySelector('#wordmark .b');
+  if (mark && !mark.innerHTML.includes('Night')) mark.innerHTML = 'Night<br>Wing';
+  const sub = document.querySelector('#wordmark .sub');
+  if (sub && sub.textContent !== 'eight-case exhibition') sub.textContent = 'eight-case exhibition';
+  document.getElementById('cg-frame')?.classList.add('cg-museum');
 }
 
 function loadProgress() {
@@ -397,14 +411,13 @@ function checkCases() {
   const fresh = freshUnlocks(owned.keys);
   const state = { run, progress, owned };
   let sealed = null;
-  for (const item of CASES) {
-    if (progress.cleared.includes(item.id)) continue;
-    if (item.test(state)) {
-      progress.cleared.push(item.id);
-      sealed = item;
-    }
+  const current = activeCase();
+  const bannerOpen = ui.banner.classList.contains('show');
+  if (current && !bannerOpen && current.test(state)) {
+    progress.cleared.push(current.id);
+    sealed = current;
+    saveProgress();
   }
-  if (sealed) saveProgress();
   renderPanel(owned);
   if (document.getElementById('over').classList.contains('show')) renderReport(owned);
   const action = document.getElementById('shopAction');
@@ -417,10 +430,12 @@ function checkCases() {
   if (!toastedBoot) return;
   if (fresh.length) {
     const figure = CHARACTER_CATALOG.find((character) => character.key === fresh[fresh.length - 1]);
-    const extra = sealed ? ` Case sealed · ${sealed.title}.` : '';
-    banner('ON THE SHELF', figure ? figure.en : 'NEW FIGURE', `Tickets opened this figure.${extra} They stay equipped until you choose another.`);
+    const extra = sealed ? ` Wing case sealed · ${sealed.title}.` : '';
+    banner('ACQUIRED', figure ? figure.en : 'NEW FIGURE', `This figure joins the wing.${extra} Press C to choose who crosses next.`);
   } else if (sealed) {
-    banner('CASE SEALED', sealed.title, sealed.detail);
+    const follow = activeCase();
+    const nextLine = follow ? `Next case · ${follow.title}. ${follow.detail}` : 'The night wing is open. The reserve is optional.';
+    banner(follow ? 'CASE SEALED' : 'WING OPEN', sealed.title, `${sealed.detail} ${nextLine}`);
   }
 }
 
@@ -432,16 +447,16 @@ function renderPanel(owned = snapshotOwned()) {
     const now = current && current.id === item.id ? ' now' : '';
     return `<i class="${(on + now).trim()}"></i>`;
   }).join('');
-  const reading = current && current.meter ? current.meter({ run, progress, owned }) : { label: 'Shelf complete', ratio: 1 };
+  const reading = current && current.meter ? current.meter({ run, progress, owned }) : { label: 'Wing open', ratio: 1 };
   const ratio = Math.max(0, Math.min(1, reading.ratio || 0));
   const affordable = owned.next && owned.tickets >= owned.next.cost;
   const next = !owned.next
-    ? `Full shelf · ${owned.owned} / ${CHARACTER_CATALOG.length}`
+    ? `Reserve complete · ${owned.owned} / ${CHARACTER_CATALOG.length}`
     : `Next figure · ${owned.next.en} · ${owned.tickets} / ${owned.next.cost} tickets`;
-  const title = current ? current.title : 'Shelf complete';
-  const detail = current ? current.detail : 'All 8 cases are sealed. Keep opening figures.';
+  const title = current ? current.title : 'Wing open';
+  const detail = current ? current.detail : 'All 8 cases are sealed. Further figures are the reserve.';
   const ready = affordable ? `<span class="cg-ready">Ready — press C to place ${owned.next.en}</span>` : '';
-  const html = `<p class="cg-kicker">CASE ${index} / ${CASES.length}</p><strong>${title}</strong><p>${detail}</p><div class="cg-meter" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="${Math.round(ratio * 100)}"><i style="width:${Math.round(ratio * 100)}%"></i></div><span class="cg-meter-label">${reading.label}</span><div class="cg-stamps">${stamps}</div><span class="cg-next">${next}</span>${ready}<span class="cg-keys">Space charge · C case · M music</span>`;
+  const html = `<p class="cg-kicker">WING ${index} / ${CASES.length}</p><strong>${title}</strong><p>${detail}</p><div class="cg-meter" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="${Math.round(ratio * 100)}"><i style="width:${Math.round(ratio * 100)}%"></i></div><span class="cg-meter-label">${reading.label}</span><div class="cg-stamps">${stamps}</div><span class="cg-next">${next}</span>${ready}<span class="cg-keys">Space cross · C wing · M music</span>`;
   if (html === caseSignature) return;
   caseSignature = html;
   ui.panel.innerHTML = html;
@@ -462,12 +477,13 @@ function renderReport(owned = snapshotOwned()) {
   const reading = current && current.meter ? current.meter({ run, progress, owned }) : null;
   const affordable = owned.next && owned.tickets >= owned.next.cost;
   const next = !owned.next
-    ? 'Every figure in this circuit is unlocked.'
+    ? 'The reserve is complete.'
     : affordable
-      ? `You can place ${owned.next.en} now · ${owned.tickets} tickets`
-      : `Next · ${owned.next.en} · ${owned.tickets} / ${owned.next.cost} tickets`;
+      ? `Place ${owned.next.en} now · press C · ${owned.tickets} tickets`
+      : `Next figure · ${owned.next.en} · ${owned.tickets} / ${owned.next.cost} tickets`;
   const bar = reading ? `<span class="cg-meter-label">${reading.label}</span><div class="cg-meter"><i style="width:${Math.round(Math.max(0, Math.min(1, reading.ratio)) * 100)}%"></i></div>` : '';
-  report.innerHTML = `<strong>${progress.cleared.length} / ${CASES.length} cases sealed</strong><span>${current ? 'Open case · ' + current.title : 'The exhibition shelf is complete.'}</span>${bar}<span class="${affordable ? 'cg-ready' : ''}">${next}</span>`;
+  const wing = current ? `Open case · ${current.title}` : 'The night wing is open.';
+  report.innerHTML = `<strong>${progress.cleared.length} / ${CASES.length} wing cases</strong><span>${wing}</span>${bar}<span class="${affordable ? 'cg-ready' : ''}">${next}</span>`;
 }
 
 function banner(kicker, title, detail) {
@@ -528,6 +544,11 @@ function watchRun() {
         progress.bestScore = Math.max(progress.bestScore, score);
         saveProgress();
         checkCases();
+        if (toastedBoot && !ui.banner.classList.contains('show')) {
+          const goal = activeCase();
+          const reading = goal ? goal.meter({ run, progress, owned: snapshotOwned() }) : null;
+          toast(reading ? `Pedestal secured · ${reading.label}` : 'Pedestal secured');
+        }
       }
       if (combo > run.combo) {
         run.combo = combo;
@@ -571,53 +592,23 @@ function createTutorial(stage) {
   document.documentElement.classList.add('cg-tut-on');
   const steps = [
     {
-      kicker: 'STEP 1 OF 5',
-      title: 'The figurine circuit',
-      body: 'Sky Leap puts one toy figure on a sky shelf. There are 56 to collect: commuters, monsters, and animals. Falls pay tickets. Tickets open the next figure. Eight exhibition cases give the session a trail.',
+      kicker: 'THE NIGHT WING',
+      title: 'Fill eight cases',
+      body: 'Escort one figurine across the pedestals. Each fall pays tickets. Tickets place the next figure. The plaque on the left is tonight’s goal — eight cases, in order. The other figures are a reserve, not the session.',
       practice: false,
       actions: [
         { label: 'Skip', quiet: true, run: finishTutorial },
-        { label: 'Begin', primary: true, run: () => showStep(1) },
+        { label: 'Show the crossing', primary: true, run: () => showStep(1) },
       ],
     },
     {
-      kicker: 'STEP 2 OF 5',
-      title: 'Charge the leap',
-      body: 'Hold Space, W, Up, or the left mouse button. A ring grows under the figure. Release to launch toward the next shelf. Try one leap.',
+      kicker: 'ONE CROSSING',
+      title: 'Hold, then release',
+      body: 'Hold Space, W, Up, or the mouse. A ring grows under the figure. Release to carry them to the next pedestal. The left plaque counts it.',
       practice: true,
       actions: [
-        { label: 'Skip tutorial', quiet: true, run: finishTutorial },
-        { label: 'Next', primary: true, id: 'cg-practice-next', disabled: true, run: () => showStep(2) },
-      ],
-    },
-    {
-      kicker: 'STEP 3 OF 5',
-      title: 'Center seal',
-      body: 'The middle of a shelf stamps PERFECT and builds a combo. A rim landing still counts, and the combo breaks. The case tracker in the top right shows the open goal.',
-      practice: false,
-      actions: [
-        { label: 'Skip', quiet: true, run: finishTutorial },
-        { label: 'Next', primary: true, run: () => showStep(3) },
-      ],
-    },
-    {
-      kicker: 'STEP 4 OF 5',
-      title: 'Fill the case',
-      body: 'Toy shelf, top left, opens all 56 figures. Commuter is free. Shopkeeper is 5 tickets — any fall pays it. Vampire is 20 and Pig is 24, so a rare figure fits the first session.',
-      practice: false,
-      actions: [
-        { label: 'Skip', quiet: true, run: finishTutorial },
-        { label: 'Open the case', quiet: true, run: openCaseThenContinue },
-        { label: 'Next', primary: true, run: () => showStep(4) },
-      ],
-    },
-    {
-      kicker: 'STEP 5 OF 5',
-      title: 'Eight cases',
-      body: 'The tracker leads you: two landings, then Shopkeeper, a perfect, a ×2 combo, three figures, an 8-point run, a monster or animal, then five figures. Space charges. C opens the case. M toggles music.',
-      practice: false,
-      actions: [
-        { label: 'Start the circuit', primary: true, run: finishTutorial },
+        { label: 'Skip to the wing', quiet: true, run: finishTutorial },
+        { label: 'Start the wing', primary: true, id: 'cg-practice-next', disabled: true, run: finishTutorial },
       ],
     },
   ];
@@ -658,25 +649,11 @@ function createTutorial(stage) {
       if (state === 'launch' || state === 'falling' || state === 'dead') {
         if (next) next.disabled = false;
         const body = root.querySelector('#cg-tut-body');
-        if (body) body.textContent = 'That launch counts. Land on the shelf, or continue and read the center-seal lesson.';
+        if (body) body.textContent = 'That crossing counts. Land on the pedestal, or start the wing now. Shopkeeper is 5 tickets — any fall pays it. Press C to place a figure.';
       }
       requestAnimationFrame(tick);
     };
     requestAnimationFrame(tick);
-  }
-
-  function openCaseThenContinue() {
-    root.hidden = true;
-    document.getElementById('collectionEntry').click();
-    const shop = document.getElementById('shop');
-    const observer = new MutationObserver(() => {
-      if (!shop.classList.contains('show')) {
-        observer.disconnect();
-        root.hidden = false;
-        showStep(4);
-      }
-    });
-    observer.observe(shop, { attributes: true, attributeFilter: ['class'] });
   }
 
   showStep(0);
