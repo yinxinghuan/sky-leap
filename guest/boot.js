@@ -3,20 +3,80 @@ import './guest.css';
 import bgmUrl from './audio/chillloopable.mp3';
 import { CHARACTER_CATALOG } from '../src/character-library.js';
 
-const PROGRESS_KEY = 'cg-sky-leap-circuit-v1';
+const PROGRESS_KEY = 'cg-sky-leap-circuit-v2';
 const TUTORIAL_KEY = 'cg-sky-leap-tutorial-v1';
 const MUTE_KEY = 'cg-sky-leap-user-mute';
 
 const CASES = [
-  { id: 'land3', title: 'Open the case', detail: 'Land on 3 shelves in one run.', test: (s) => s.run.landings >= 3 },
-  { id: 'perfect', title: 'Center seal', detail: 'Stamp one PERFECT in the middle of a shelf.', test: (s) => s.progress.perfects >= 1 },
-  { id: 'combo', title: 'Window combo', detail: 'Chain a ×3 combo.', test: (s) => s.run.combo >= 3 || s.progress.bestCombo >= 3 },
-  { id: 'route', title: 'Long route', detail: 'Reach 12 points in one run.', test: (s) => s.run.score >= 12 || s.progress.bestScore >= 12 },
-  { id: 'second', title: 'Second figure', detail: 'Unlock any figure besides the starter commuter.', test: (s) => s.owned.owned >= 2 },
-  { id: 'five', title: 'Five on the shelf', detail: 'Own 5 figures.', test: (s) => s.owned.owned >= 5 },
-  { id: 'exhibit', title: 'Exhibition route', detail: 'Reach 20 points in one run.', test: (s) => s.run.score >= 20 || s.progress.bestScore >= 20 },
-  { id: 'after', title: 'After hours', detail: 'Unlock a monster or an animal figure.', test: (s) => s.owned.special >= 1 },
+  {
+    id: 'land2', title: 'Open the case', detail: 'Land on 2 shelves in one run.',
+    test: (s) => s.run.landings >= 2,
+    meter: (s) => meter(s.run.landings, 2, 'landings'),
+  },
+  {
+    id: 'second', title: 'Second figure', detail: 'Place Shopkeeper. Any fall pays the 5 tickets.',
+    test: (s) => s.owned.owned >= 2,
+    meter: (s) => (s.owned.owned >= 2 ? { label: 'Placed', ratio: 1 } : meter(s.owned.tickets, 5, 'tickets')),
+  },
+  {
+    id: 'perfect', title: 'Center seal', detail: 'Stamp one PERFECT in the middle of a shelf.',
+    test: (s) => s.progress.perfects >= 1,
+    meter: (s) => meter(s.progress.perfects, 1, 'perfect'),
+  },
+  {
+    id: 'combo', title: 'Window combo', detail: 'Chain a ×2 combo.',
+    test: (s) => s.run.combo >= 2 || s.progress.bestCombo >= 2,
+    meter: (s) => meter(Math.max(s.run.combo, s.progress.bestCombo), 2, 'combo'),
+  },
+  {
+    id: 'three', title: 'Three on the shelf', detail: 'Own 3 figures. The next two are 7 and 9 tickets.',
+    test: (s) => s.owned.owned >= 3,
+    meter: (s) => meter(s.owned.owned, 3, 'figures'),
+  },
+  {
+    id: 'route', title: 'Long route', detail: 'Reach 8 points in one run.',
+    test: (s) => s.run.score >= 8 || s.progress.bestScore >= 8,
+    meter: (s) => meter(Math.max(s.run.score, s.progress.bestScore), 8, 'points'),
+  },
+  {
+    id: 'after', title: 'After hours', detail: 'Place a monster or animal. Vampire is 20 tickets, Pig is 24.',
+    test: (s) => s.owned.special >= 1,
+    meter: (s) => rareMeter(s.owned),
+  },
+  {
+    id: 'five', title: 'Five on the shelf', detail: 'Own 5 figures. Shopkeeper through Blonde are 5 to 11 tickets.',
+    test: (s) => s.owned.owned >= 5,
+    meter: (s) => meter(s.owned.owned, 5, 'figures'),
+  },
 ];
+
+function meter(value, goal, unit) {
+  const current = Math.max(0, Math.min(goal, Number(value) || 0));
+  return { label: `${current} / ${goal} ${unit}`, ratio: goal ? current / goal : 1 };
+}
+
+function rareMeter(owned) {
+  if (owned.special >= 1) return { label: 'Rare figure placed', ratio: 1 };
+  const rare = CHARACTER_CATALOG.find((character) => (character.category === '怪物' || character.category === '动物') && !owned.keys.has(character.key));
+  if (!rare) return { label: 'Rare figure placed', ratio: 1 };
+  const have = Math.min(owned.tickets, rare.cost);
+  return { label: `${rare.en} · ${have} / ${rare.cost} tickets`, ratio: rare.cost ? have / rare.cost : 1 };
+}
+
+// Guest-only shelf prices. The shared catalog stays at the host costs;
+// this mutates the live objects before the game module reads them.
+function applyGuestShelf() {
+  let people = 0;
+  let monsters = 0;
+  let animals = 0;
+  for (const character of CHARACTER_CATALOG) {
+    if (character.name) EXACT.set(character.name, character.en);
+    if (character.cost === 0) continue;
+    if (character.category === '怪物') character.cost = 20 + monsters++ * 4;
+    else if (character.category === '动物') character.cost = 24 + animals++ * 4;
+    else character.cost = 5 + people++ * 2;
+  }
+}
 
 const EXACT = new Map([
   ['角色收藏', 'Toy shelf'],
@@ -46,6 +106,10 @@ const EXACT = new Map([
   ['特殊', 'Special'],
   ['异界', 'Outland'],
   ['动物', 'Animal'],
+  ['角色分类', 'Figure groups'],
+  ['当前角色 3D 预览', 'Figure preview'],
+  ['上一位角色', 'Previous figure'],
+  ['下一位角色', 'Next figure'],
 ]);
 
 const TEXT_RULES = [
@@ -56,6 +120,7 @@ const TEXT_RULES = [
   [/^本局获得 (\d+) 张车票 · 再跳几步，解锁下一位通勤者$/, 'This fall paid $1 tickets. Keep leaping to open the next figure.'],
   [/^(\d+) 张车票$/, '$1 tickets'],
 ];
+applyGuestShelf();
 
 const params = new URLSearchParams(location.search);
 const queryMuted = params.get('muteAudio') === 'true';
@@ -206,6 +271,9 @@ function buildChrome(stage) {
   panel.setAttribute('aria-live', 'polite');
   const toast = document.createElement('div');
   toast.id = 'cg-toast';
+  const banner = document.createElement('div');
+  banner.id = 'cg-banner';
+  banner.innerHTML = '<p class="cg-step"></p><h2></h2><p class="cg-banner-detail"></p>';
   const mute = document.createElement('button');
   mute.id = 'cg-mute';
   mute.type = 'button';
@@ -225,8 +293,9 @@ function buildChrome(stage) {
       <p>Figures, shelves, and leap sounds are part of Sky Leap. This guest build adds the figurine-circuit cases on top.</p>
       <div class="cg-actions"><button type="button" class="cg-primary" id="cg-credits-close">Close</button></div>
     </div>`;
-  stage.append(panel, toast, mute, creditsBtn, credits);
-  for (const node of [panel, mute, creditsBtn, credits]) stopCharge(node);
+  stage.append(panel, toast, banner, mute, creditsBtn, credits);
+  for (const node of [panel, mute, creditsBtn, credits, banner]) stopCharge(node);
+  banner.addEventListener('click', () => banner.classList.remove('show'));
   mute.addEventListener('click', () => {
     if (queryMuted || sdkMuted()) return;
     userMuted = !userMuted;
@@ -236,7 +305,7 @@ function buildChrome(stage) {
   creditsBtn.addEventListener('click', () => credits.classList.add('show'));
   credits.querySelector('#cg-credits-close').addEventListener('click', () => credits.classList.remove('show'));
   credits.addEventListener('click', (event) => { if (event.target === credits) credits.classList.remove('show'); });
-  return { panel, toast, mute, credits };
+  return { panel, toast, banner, mute, credits };
 }
 
 function stopCharge(node) {
@@ -261,10 +330,14 @@ function translateTree(root) {
   const nodes = [];
   while (walker.nextNode()) nodes.push(walker.currentNode);
   for (const node of nodes) {
-    if (node.parentElement && node.parentElement.closest('#cg-tutorial, #cg-credits-modal, #cg-case, #cg-toast, #cg-report')) continue;
+    if (node.parentElement && node.parentElement.closest('#cg-tutorial, #cg-credits-modal, #cg-case, #cg-toast, #cg-banner, #cg-report')) continue;
     const next = translate(node.nodeValue);
     if (next != null && next !== node.nodeValue) node.nodeValue = next;
   }
+  root.querySelectorAll('[aria-label]').forEach((el) => {
+    const next = translate(el.getAttribute('aria-label'));
+    if (next != null) el.setAttribute('aria-label', next.trim());
+  });
 }
 
 function watchHostCopy(root) {
@@ -301,7 +374,18 @@ function snapshotOwned() {
   if (!unlocked.has('commuter')) unlocked.add('commuter');
   const special = CHARACTER_CATALOG.filter((character) => unlocked.has(character.key) && (character.category === '怪物' || character.category === '动物')).length;
   const next = CHARACTER_CATALOG.find((character) => !unlocked.has(character.key));
-  return { tickets: Math.max(0, Number(data.tickets) || 0), owned: unlocked.size, special, next };
+  return { tickets: Math.max(0, Number(data.tickets) || 0), owned: unlocked.size, special, next, keys: unlocked };
+}
+
+let seenUnlocked = null;
+function freshUnlocks(keys) {
+  if (!seenUnlocked) {
+    seenUnlocked = new Set(keys);
+    return [];
+  }
+  const fresh = [...keys].filter((key) => !seenUnlocked.has(key));
+  seenUnlocked = new Set(keys);
+  return fresh;
 }
 
 function activeCase() {
@@ -310,6 +394,7 @@ function activeCase() {
 
 function checkCases() {
   const owned = snapshotOwned();
+  const fresh = freshUnlocks(owned.keys);
   const state = { run, progress, owned };
   let sealed = null;
   for (const item of CASES) {
@@ -322,7 +407,21 @@ function checkCases() {
   if (sealed) saveProgress();
   renderPanel(owned);
   if (document.getElementById('over').classList.contains('show')) renderReport(owned);
-  if (sealed && toastedBoot) toast('Case sealed · ' + sealed.title);
+  const action = document.getElementById('shopAction');
+  if (action) {
+    const shown = (document.getElementById('shopName')?.textContent || '').trim();
+    const preview = CHARACTER_CATALOG.find((character) => character.en === shown);
+    const canBuy = !!(preview && preview.cost > 0 && !owned.keys.has(preview.key) && owned.tickets >= preview.cost);
+    action.classList.toggle('cg-can-buy', canBuy);
+  }
+  if (!toastedBoot) return;
+  if (fresh.length) {
+    const figure = CHARACTER_CATALOG.find((character) => character.key === fresh[fresh.length - 1]);
+    const extra = sealed ? ` Case sealed · ${sealed.title}.` : '';
+    banner('ON THE SHELF', figure ? figure.en : 'NEW FIGURE', `Tickets opened this figure.${extra} They stay equipped until you choose another.`);
+  } else if (sealed) {
+    banner('CASE SEALED', sealed.title, sealed.detail);
+  }
 }
 
 function renderPanel(owned = snapshotOwned()) {
@@ -333,15 +432,20 @@ function renderPanel(owned = snapshotOwned()) {
     const now = current && current.id === item.id ? ' now' : '';
     return `<i class="${(on + now).trim()}"></i>`;
   }).join('');
-  const next = owned.next
-    ? `Next figure · ${owned.next.en} · ${owned.next.cost} tickets · you have ${owned.tickets}`
-    : `Full shelf · ${owned.owned} / ${CHARACTER_CATALOG.length} · ${owned.tickets} tickets`;
+  const reading = current && current.meter ? current.meter({ run, progress, owned }) : { label: 'Shelf complete', ratio: 1 };
+  const ratio = Math.max(0, Math.min(1, reading.ratio || 0));
+  const affordable = owned.next && owned.tickets >= owned.next.cost;
+  const next = !owned.next
+    ? `Full shelf · ${owned.owned} / ${CHARACTER_CATALOG.length}`
+    : `Next figure · ${owned.next.en} · ${owned.tickets} / ${owned.next.cost} tickets`;
   const title = current ? current.title : 'Shelf complete';
   const detail = current ? current.detail : 'All 8 cases are sealed. Keep opening figures.';
-  const html = `<p class="cg-kicker">CASE ${index} / ${CASES.length}</p><strong>${title}</strong><p>${detail}</p><div class="cg-stamps">${stamps}</div><span class="cg-next">${next}</span><span class="cg-keys">Space charge · C case · M music</span>`;
+  const ready = affordable ? `<span class="cg-ready">Ready — press C to place ${owned.next.en}</span>` : '';
+  const html = `<p class="cg-kicker">CASE ${index} / ${CASES.length}</p><strong>${title}</strong><p>${detail}</p><div class="cg-meter" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="${Math.round(ratio * 100)}"><i style="width:${Math.round(ratio * 100)}%"></i></div><span class="cg-meter-label">${reading.label}</span><div class="cg-stamps">${stamps}</div><span class="cg-next">${next}</span>${ready}<span class="cg-keys">Space charge · C case · M music</span>`;
   if (html === caseSignature) return;
   caseSignature = html;
   ui.panel.innerHTML = html;
+  document.getElementById('collectionEntry')?.classList.toggle('cg-ready-entry', Boolean(affordable));
 }
 
 function renderReport(owned = snapshotOwned()) {
@@ -355,8 +459,25 @@ function renderReport(owned = snapshotOwned()) {
     card.insertBefore(report, buttons);
   }
   const current = activeCase();
-  const next = owned.next ? `${owned.next.en} · ${owned.next.cost} tickets · you have ${owned.tickets}` : 'Every figure in this circuit is unlocked.';
-  report.innerHTML = `<strong>${progress.cleared.length} / ${CASES.length} cases sealed</strong><span>${current ? 'Open case · ' + current.title + ' · ' + current.detail : 'The exhibition shelf is complete.'}</span><span>${next}</span>`;
+  const reading = current && current.meter ? current.meter({ run, progress, owned }) : null;
+  const affordable = owned.next && owned.tickets >= owned.next.cost;
+  const next = !owned.next
+    ? 'Every figure in this circuit is unlocked.'
+    : affordable
+      ? `You can place ${owned.next.en} now · ${owned.tickets} tickets`
+      : `Next · ${owned.next.en} · ${owned.tickets} / ${owned.next.cost} tickets`;
+  const bar = reading ? `<span class="cg-meter-label">${reading.label}</span><div class="cg-meter"><i style="width:${Math.round(Math.max(0, Math.min(1, reading.ratio)) * 100)}%"></i></div>` : '';
+  report.innerHTML = `<strong>${progress.cleared.length} / ${CASES.length} cases sealed</strong><span>${current ? 'Open case · ' + current.title : 'The exhibition shelf is complete.'}</span>${bar}<span class="${affordable ? 'cg-ready' : ''}">${next}</span>`;
+}
+
+function banner(kicker, title, detail) {
+  const root = ui.banner;
+  root.querySelector('.cg-step').textContent = kicker;
+  root.querySelector('h2').textContent = title;
+  root.querySelector('.cg-banner-detail').textContent = detail;
+  root.classList.add('show');
+  clearTimeout(banner._t);
+  banner._t = setTimeout(() => root.classList.remove('show'), 3400);
 }
 
 function toast(text) {
@@ -383,12 +504,14 @@ function watchRun() {
       endGameplay();
     } else if (shop.classList.contains('show')) {
       endGameplay();
+      setTimeout(checkCases, 0);
     } else if (!tutorialOpen()) {
       beginGameplay();
     }
   });
   observer.observe(over, { attributes: true, attributeFilter: ['class'] });
   observer.observe(shop, { attributes: true, attributeFilter: ['class'] });
+  document.getElementById('shopAction').addEventListener('click', () => setTimeout(checkCases, 40));
   const poll = () => {
     const live = window.__sl;
     if (live) {
@@ -417,7 +540,7 @@ function watchRun() {
     requestAnimationFrame(poll);
   };
   requestAnimationFrame(poll);
-  setInterval(checkCases, 800);
+  setInterval(checkCases, 250);
 }
 
 function tutorialOpen() {
@@ -480,7 +603,7 @@ function createTutorial(stage) {
     {
       kicker: 'STEP 4 OF 5',
       title: 'Fill the case',
-      body: 'Toy shelf, top left, opens all 56 figures. The starter commuter is free. The next figure costs 16 tickets, usually one or two falls. The figure you place stays equipped.',
+      body: 'Toy shelf, top left, opens all 56 figures. Commuter is free. Shopkeeper is 5 tickets — any fall pays it. Vampire is 20 and Pig is 24, so a rare figure fits the first session.',
       practice: false,
       actions: [
         { label: 'Skip', quiet: true, run: finishTutorial },
@@ -491,7 +614,7 @@ function createTutorial(stage) {
     {
       kicker: 'STEP 5 OF 5',
       title: 'Eight cases',
-      body: 'Seal them in order: three landings, a perfect, a combo, a longer route, then new figures. Progress stays on this device. Space charges. C opens the case. M toggles music. Esc closes panels.',
+      body: 'The tracker leads you: two landings, then Shopkeeper, a perfect, a ×2 combo, three figures, an 8-point run, a monster or animal, then five figures. Space charges. C opens the case. M toggles music.',
       practice: false,
       actions: [
         { label: 'Start the circuit', primary: true, run: finishTutorial },
