@@ -1,0 +1,106 @@
+{
+  "host": {
+    "cg": "undefined",
+    "name": "\u5e97\u5458",
+    "english": "SHOPKEEPER",
+    "englishDisplay": "block",
+    "action": "\u8fd8\u5dee 16 \u5f20\u8f66\u7968",
+    "shell": true,
+    "boot": false
+  },
+  "guest": [
+    {
+      "size": "800x450",
+      "airState": "launch",
+      "score": 1,
+      "case": "CASE 1 / 8\n\nOpen the case\n\nLand on 2 shelves in one run.\n\n1 / 2 landings\nNext figure \u00b7 SHOPKEEPER \u00b7 0 / 5 tickets",
+      "meter": "113px",
+      "result": {
+        "title": "Missed the shelf",
+        "reward": "This fall paid 5 tickets. Keep leaping to open the next figure.",
+        "report": "0 / 8 cases sealed\nOpen case \u00b7 Open the case\n1 / 2 landings\nYou can place SHOPKEEPER now \u00b7 5 tickets",
+        "rank": "none"
+      },
+      "shelf": {
+        "name": "SHOPKEEPER",
+        "englishHidden": "none",
+        "state": "Unlock for 5 tickets",
+        "action": "Unlock figure \u00b7 5",
+        "cjk": [],
+        "title": "Figurine case",
+        "wallet": "Toy shelf\n5 tickets"
+      },
+      "banner": "ON THE SHELF\n\nSHOPKEEPER\n\nTickets opened this figure. Case sealed \u00b7 Second figure. They stay equipped until you choose another.",
+      "afterBuy": {
+        "owned": "Equipped",
+        "action": "On the shelf",
+        "progress": [
+          "second"
+        ]
+      },
+      "errors": []
+    },
+    {
+      "size": "907x510",
+      "airState": "launch",
+      "score": 1,
+      "case": "CASE 1 / 8\n\nOpen the case\n\nLand on 2 shelves in one run.\n\n1 / 2 landings\nNext figure \u00b7 SHOPKEEPER \u00b7 0 / 5 tickets",
+      "meter": "113px",
+      "result": {
+        "title": "Missed the shelf",
+        "reward": "This fall paid 5 tickets. Keep leaping to open the next figure.",
+        "report": "0 / 8 cases sealed\nOpen case \u00b7 Open the case\n1 / 2 landings\nYou can place SHOPKEEPER now \u00b7 5 tickets",
+        "rank": "none"
+      },
+      "shelf": {
+        "name": "SHOPKEEPER",
+        "englishHidden": "none",
+        "state": "Unlock for 5 tickets",
+        "action": "Unlock figure \u00b7 5",
+        "cjk": [],
+        "title": "Figurine case",
+        "wallet": "Toy shelf\n5 tickets"
+      },
+      "banner": "ON THE SHELF\n\nSHOPKEEPER\n\nTickets opened this figure. Case sealed \u00b7 Second figure. They stay equipped until you choose another.",
+      "afterBuy": {
+        "owned": "Equipped",
+        "action": "On the shelf",
+        "progress": [
+          "second"
+        ]
+      },
+      "errors": []
+    },
+    {
+      "size": "1920x1080",
+      "airState": "launch",
+      "score": 1,
+      "case": "CASE 1 / 8\n\nOpen the case\n\nLand on 2 shelves in one run.\n\n1 / 2 landings\nNext figure \u00b7 SHOPKEEPER \u00b7 0 / 5 tickets\nSpace charge \u00b7 C case \u00b7 M music",
+      "meter": "123px",
+      "result": {
+        "title": "Missed the shelf",
+        "reward": "This fall paid 5 tickets. Keep leaping to open the next figure.",
+        "report": "0 / 8 cases sealed\nOpen case \u00b7 Open the case\n1 / 2 landings\nYou can place SHOPKEEPER now \u00b7 5 tickets",
+        "rank": "none"
+      },
+      "shelf": {
+        "name": "SHOPKEEPER",
+        "englishHidden": "none",
+        "state": "Unlock for 5 tickets",
+        "action": "Unlock figure \u00b7 5",
+        "cjk": [],
+        "title": "Figurine case",
+        "wallet": "Toy shelf\n5 tickets"
+      },
+      "banner": "ON THE SHELF\n\nSHOPKEEPER\n\nTickets opened this figure. Case sealed \u00b7 Second figure. They stay equipped until you choose another.",
+      "afterBuy": {
+        "owned": "Equipped",
+        "action": "On the shelf",
+        "progress": [
+          "second"
+        ]
+      },
+      "errors": []
+    }
+  ]
+}
