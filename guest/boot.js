@@ -141,6 +141,7 @@ let progress = loadProgress();
 const run = { landings: 0, perfects: 0, score: 0, combo: 0 };
 let caseSignature = '';
 let toastedBoot = false;
+let seenUnlocked = null;
 
 let sdk = null;
 let gameReady = false;
@@ -377,7 +378,6 @@ function snapshotOwned() {
   return { tickets: Math.max(0, Number(data.tickets) || 0), owned: unlocked.size, special, next, keys: unlocked };
 }
 
-let seenUnlocked = null;
 function freshUnlocks(keys) {
   if (!seenUnlocked) {
     seenUnlocked = new Set(keys);
