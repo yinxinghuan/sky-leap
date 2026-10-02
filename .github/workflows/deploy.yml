@@ -30,6 +30,10 @@ jobs:
       - run: npm ci
       - run: ln -sf ../../node_modules src/engine-3d/node_modules
       - run: npm run build
+      # Guest build sits beside the root site. Relative ./assets keep working
+      # at /sky-leap/crazygames/ and do not replace dist/index.html.
+      - run: npm run build:guest
+      - run: rm -rf dist/crazygames && mkdir -p dist/crazygames && cp -a dist-guest/. dist/crazygames/
       - uses: actions/upload-pages-artifact@v3
         with:
           path: dist
