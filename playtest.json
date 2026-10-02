@@ -1,0 +1,140 @@
+[
+  {
+    "target": "before",
+    "size": "800x450",
+    "landed": 3,
+    "errors": [],
+    "summary": {
+      "score": 9,
+      "state": "dead",
+      "over": "Fell into the clouds",
+      "rankDisplay": "block",
+      "guest": false,
+      "cases": null,
+      "report": null,
+      "shell": true
+    }
+  },
+  {
+    "target": "before",
+    "size": "907x510",
+    "landed": 3,
+    "errors": [],
+    "summary": {
+      "score": 9,
+      "state": "dead",
+      "over": "Fell into the clouds",
+      "rankDisplay": "block",
+      "guest": false,
+      "cases": null,
+      "report": null,
+      "shell": true
+    }
+  },
+  {
+    "target": "before",
+    "size": "1920x1080",
+    "landed": 3,
+    "errors": [],
+    "summary": {
+      "score": 9,
+      "state": "dead",
+      "over": "Fell into the clouds",
+      "rankDisplay": "block",
+      "guest": false,
+      "cases": null,
+      "report": null,
+      "shell": true
+    }
+  },
+  {
+    "target": "after",
+    "size": "800x450",
+    "landed": 3,
+    "errors": [],
+    "summary": {
+      "score": 9,
+      "state": "dead",
+      "over": "Missed the shelf",
+      "rankDisplay": "none",
+      "guest": true,
+      "cases": [
+        "perfect",
+        "land3",
+        "combo"
+      ],
+      "report": "3 / 8 cases sealed\nOpen case · Long route · Reach 12 points in one run.\nSHOPKEEPER · 16 tickets · you have 11",
+      "shell": false
+    }
+  },
+  {
+    "target": "after",
+    "size": "907x510",
+    "landed": 3,
+    "errors": [],
+    "summary": {
+      "score": 9,
+      "state": "dead",
+      "over": "Missed the shelf",
+      "rankDisplay": "none",
+      "guest": true,
+      "cases": [
+        "perfect",
+        "land3",
+        "combo"
+      ],
+      "report": "3 / 8 cases sealed\nOpen case · Long route · Reach 12 points in one run.\nSHOPKEEPER · 16 tickets · you have 22",
+      "shell": false
+    }
+  },
+  {
+    "target": "after",
+    "size": "1920x1080",
+    "landed": 3,
+    "errors": [],
+    "summary": {
+      "score": 9,
+      "state": "dead",
+      "over": "Missed the shelf",
+      "rankDisplay": "none",
+      "guest": true,
+      "cases": [
+        "perfect",
+        "land3",
+        "combo"
+      ],
+      "report": "3 / 8 cases sealed\nOpen case · Long route · Reach 12 points in one run.\nSHOPKEEPER · 16 tickets · you have 33",
+      "shell": false
+    }
+  },
+  {
+    "keyboard": {
+      "score": 1,
+      "state": "idle",
+      "music": {
+        "paused": true,
+        "muted": true,
+        "volume": 0.34,
+        "src": "http://127.0.0.1:4174/assets/chillloopable-DmhU0MUp.mp3"
+      }
+    },
+    "portrait": {
+      "frame": [
+        450,
+        253
+      ],
+      "canvas": [
+        450,
+        253
+      ],
+      "inner": [
+        450,
+        253
+      ]
+    },
+    "sdk": {
+      "present": true,
+      "env": "local"
+    }
+  }
+]
