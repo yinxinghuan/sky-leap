@@ -1,7 +1,11 @@
-Chill (Loopable)
-Author: Alex McCulloch (Pro Sensory)
-License: CC0 1.0 Universal — public domain, commercial use allowed.
-Source: https://opengameart.org/content/chill-loopable
-File: chillloopable.mp3 (MPEG-1 Layer III, 192 kbps, 44.1 kHz, about 67 seconds, looped in the guest build)
+Nighttime Solitude
+Author: celestialghost8
+License: CC0 1.0 Universal — public domain. Commercial use is allowed. Attribution is not required.
+Source: https://opengameart.org/content/nighttime-solitude
+File: nighttime-solitude.mp3 (MPEG-1 Layer III, 128 kbps, 44.1 kHz, about 3 minutes 12 seconds, looped in the guest build)
 
-CC0 does not require attribution. The author asked that the name Alex McCulloch appear in project credits, and the guest credits panel includes it.
+The file's embedded comment points at an Internet Archive item. The copy bundled here is the CC0 upload on OpenGameArt.
+
+Gallery tones for a pedestal secure, a case seal, an acquisition, and a ticket purchase are original sine-bell synthesis in guest/gallery-sfx.js. They are not third-party samples.
+
+This track replaces Chill (Loopable) by Alex McCulloch (Pro Sensory), which was the previous guest loop and remains CC0 at https://opengameart.org/content/chill-loopable. It is no longer bundled.

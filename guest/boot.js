@@ -1,6 +1,7 @@
 // Crazy Games guest layer. The host page never imports this module.
 import './guest.css';
-import bgmUrl from './audio/chillloopable.mp3';
+import bgmUrl from './audio/nighttime-solitude.mp3';
+import { setGalleryMuted, sfxAcquired, sfxPedestal, sfxPurchase, sfxSeal } from './gallery-sfx.js';
 import { CHARACTER_CATALOG } from '../src/character-library.js';
 
 const PROGRESS_KEY = 'cg-sky-leap-wing-v3';
@@ -179,7 +180,9 @@ function gateFor(ctx) {
   const existing = gateList.find((item) => item.ctx === ctx);
   if (existing) return existing.node;
   const node = ctx.createGain();
-  node.gain.value = wantMute() ? 0 : 1;
+  // Host charge, whoosh, land, and crash tones share this bus. Keep them quiet
+  // so the guest gallery bells carry the pedestal, seal, and purchase moments.
+  node.gain.value = wantMute() ? 0 : 0.16;
   routingAudio = true;
   AudioNode.prototype.connect.call(node, ctx.destination);
   routingAudio = false;
@@ -197,7 +200,8 @@ function sdkMuted() {
 
 function applyMute() {
   const muted = wantMute();
-  for (const gate of gateList) gate.node.gain.value = muted ? 0 : 1;
+  for (const gate of gateList) gate.node.gain.value = muted ? 0 : 0.16;
+  setGalleryMuted(muted);
   bgm.muted = muted;
   if (muted) bgm.pause();
   else if (audioStarted) bgm.play().catch(() => {});
@@ -211,7 +215,7 @@ function createBgm() {
   const audio = new Audio(bgmUrl);
   audio.loop = true;
   audio.preload = 'auto';
-  audio.volume = 0.34;
+  audio.volume = 0.42;
   return audio;
 }
 
@@ -292,7 +296,8 @@ function buildChrome(stage) {
     <div class="cg-card" role="dialog" aria-modal="true" aria-labelledby="cg-credits-title">
       <p class="cg-step">AUDIO</p>
       <h2 id="cg-credits-title">Music</h2>
-      <p><strong>Chill (Loopable)</strong> by Alex McCulloch (Pro Sensory). CC0 1.0, public domain, commercial use allowed. Source: opengameart.org/content/chill-loopable. The track is bundled and looped.</p>
+      <p><strong>Nighttime Solitude</strong> by celestialghost8. CC0 1.0, public domain, commercial use allowed. Source: opengameart.org/content/nighttime-solitude. The track is bundled and looped.</p>
+      <p>Pedestal, case-seal, acquisition, and purchase tones are original soft bells in this guest build. The host crossing sounds are kept very quiet underneath.</p>
       <p>Figures and crossing sounds are part of Sky Leap. This guest build is the Night Wing: eight ordered exhibition cases on top of the same pedestals.</p>
       <div class="cg-actions"><button type="button" class="cg-primary" id="cg-credits-close">Close</button></div>
     </div>`;
@@ -487,6 +492,8 @@ function renderReport(owned = snapshotOwned()) {
 }
 
 function banner(kicker, title, detail) {
+  if (kicker === 'ACQUIRED') sfxAcquired();
+  else if (kicker === 'CASE SEALED' || kicker === 'WING OPEN') sfxSeal();
   const root = ui.banner;
   root.querySelector('.cg-step').textContent = kicker;
   root.querySelector('h2').textContent = title;
@@ -527,7 +534,11 @@ function watchRun() {
   });
   observer.observe(over, { attributes: true, attributeFilter: ['class'] });
   observer.observe(shop, { attributes: true, attributeFilter: ['class'] });
-  document.getElementById('shopAction').addEventListener('click', () => setTimeout(checkCases, 40));
+  document.getElementById('shopAction').addEventListener('click', () => {
+    const button = document.getElementById('shopAction');
+    if (button && !button.disabled && /Unlock/i.test(button.textContent || '')) sfxPurchase();
+    setTimeout(checkCases, 40);
+  });
   const poll = () => {
     const live = window.__sl;
     if (live) {
@@ -547,6 +558,7 @@ function watchRun() {
         if (toastedBoot && !ui.banner.classList.contains('show')) {
           const goal = activeCase();
           const reading = goal ? goal.meter({ run, progress, owned: snapshotOwned() }) : null;
+          sfxPedestal();
           toast(reading ? `Pedestal secured · ${reading.label}` : 'Pedestal secured');
         }
       }

@@ -51,16 +51,17 @@ export default defineConfig({
         const bridge = path.join(outDir, 'aigram-bridge.js');
         if (fs.existsSync(bridge)) fs.unlinkSync(bridge);
         const notices = path.join(outDir, 'THIRD_PARTY_NOTICES.txt');
-        if (fs.existsSync(notices) && !fs.readFileSync(notices, 'utf8').includes('Chill (Loopable)')) {
+        if (fs.existsSync(notices) && !fs.readFileSync(notices, 'utf8').includes('Nighttime Solitude')) {
           fs.appendFileSync(notices, [
             '',
-            '3. Chill (Loopable) — guest build soundtrack',
-            '---------------------------------------------',
+            '3. Nighttime Solitude — guest build soundtrack',
+            '-----------------------------------------------',
             '',
-            'Author: Alex McCulloch (Pro Sensory)',
+            'Author: celestialghost8',
             'License: CC0 1.0 Universal (public domain)',
-            'Source: https://opengameart.org/content/chill-loopable',
-            'Bundled as audio/chillloopable.mp3 and looped by the Crazy Games guest build.',
+            'Source: https://opengameart.org/content/nighttime-solitude',
+            'Bundled as audio/nighttime-solitude.mp3 and looped by the Crazy Games guest build.',
+            'Pedestal, case-seal, acquisition, and purchase tones are original synthesis in guest/gallery-sfx.js.',
             '',
           ].join('\n'));
         }
