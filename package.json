@@ -3,7 +3,7 @@
   "private": true,
   "version": "0.1.0",
   "type": "module",
-  "scripts": { "dev": "vite", "build": "vite build", "preview": "vite preview" },
+  "scripts": { "dev": "vite", "build": "vite build", "preview": "vite preview", "build:guest": "vite build --config vite.guest.config.js", "test:guest": "node guest/transform-html.test.js" },
   "dependencies": { "three": "0.160.0" },
   "devDependencies": { "vite": "^5.1.0" }
 }

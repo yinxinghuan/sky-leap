@@ -1,0 +1,7 @@
+Chill (Loopable)
+Author: Alex McCulloch (Pro Sensory)
+License: CC0 1.0 Universal — public domain, commercial use allowed.
+Source: https://opengameart.org/content/chill-loopable
+File: chillloopable.mp3 (MPEG-1 Layer III, 192 kbps, 44.1 kHz, about 67 seconds, looped in the guest build)
+
+CC0 does not require attribution. The author asked that the name Alex McCulloch appear in project credits, and the guest credits panel includes it.
