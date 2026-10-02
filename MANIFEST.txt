@@ -34,4 +34,5 @@
 ./before/907x510-result.png
 ./before/907x510-start.png
 ./before/907x510-tutorial.png
+./playtest-r2.json
 ./playtest.json
